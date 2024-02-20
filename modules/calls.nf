@@ -296,8 +296,8 @@ for f in vcf*.vcf.gz; do
     bcftools index \$f
 done
 if [ -f vcf.vcf.gz ]; then # Single file given, no merge needed
-    cp vcf.vcf.gz common_vs_ref.merged.vcf.gz
-    mv vcf.vcf.gz.csi common_vs_ref.merged.vcf.gz.csi
+    cp vcf.vcf.gz common_vs_ref.merged0.vcf.gz
+    mv vcf.vcf.gz.csi common_vs_ref.merged0.vcf.gz.csi
 else
     cat > samples_in_config.txt <<EOF
 ${params.concordance_samples.join("\n")}
@@ -305,31 +305,33 @@ EOF
     for f in vcf*.vcf.gz; do bcftools query -l \$f; done | sort > samples_present.txt
     grep -f samples_present.txt samples_in_config.txt > samples.txt
 
-    cat >annot.hdr <<EOF
+    # for f in vcf*.vcf.gz; do bcftools query -l \$f; done | sort > samples.txt
+    bcftools merge -F x vcf*.vcf.gz | bcftools view -S samples.txt - | \
+        bcftools view -e 'AN=0' - -o common_vs_ref.merged0.vcf.gz
+    bcftools index common_vs_ref.merged0.vcf.gz
+fi
+
+## Annotate the merged file
+cat >annot.hdr <<EOF
 ##INFO=<ID=GENE,Number=1,Type=String,Description="Gene name">
 ##INFO=<ID=NOTE,Number=1,Type=String,Description="Region manual note">
 EOF
+bcftools annotate -h annot.hdr -c CHROM,FROM,TO,GENE -a ${file(params.gene_annotation_bed)} -o common_vs_ref.merged1.vcf.gz common_vs_ref.merged0.vcf.gz
+bcftools index common_vs_ref.merged1.vcf.gz
 
-    # for f in vcf*.vcf.gz; do bcftools query -l \$f; done | sort > samples.txt
-    bcftools merge -F x vcf*.vcf.gz | bcftools view -S samples.txt - | \
-        bcftools view -e 'AN=0' - | \
-        bcftools annotate -h annot.hdr -c CHROM,FROM,TO,GENE -a ${file(params.gene_annotation_bed)} -o common_vs_ref.merged1.vcf.gz
-    bcftools index common_vs_ref.merged1.vcf.gz
-
-    if [ -f ${regions_annotation} ]; then
-        ## Fix potential bad regions from igv
-        awk -F"\t" 'BEGIN{OFS="\t"}; NF<4{\$4="EmptyNote"}; {gsub(/ /,"_",\$4);print}' ${regions_annotation} > fixed.regions.bed
-        bcftools annotate -a fixed.regions.bed -c CHROM,FROM,TO,NOTE -h annot.hdr common_vs_ref.merged1.vcf.gz -o common_vs_ref.merged.vcf.gz
-        bcftools index  common_vs_ref.merged.vcf.gz
-    else
-        mv common_vs_ref.merged1.vcf.gz common_vs_ref.merged.vcf.gz
-        mv common_vs_ref.merged1.vcf.gz.csi common_vs_ref.merged.vcf.gz.csi
-    fi
-
-    ## Filtering concordant variants
-    bcftools filter -m+ -s CONCORDANT -e 'AN=N_SAMPLES && N_ALT=1' common_vs_ref.merged.vcf.gz -o common_vs_ref.merged.discordant.vcf.gz
-    bcftools index common_vs_ref.merged.discordant.vcf.gz
+if [ -f ${regions_annotation} ]; then
+    ## Fix potential bad regions from igv
+    awk -F"\t" 'BEGIN{OFS="\t"}; NF<4{\$4="EmptyNote"}; {gsub(/ /,"_",\$4);print}' ${regions_annotation} > fixed.regions.bed
+    bcftools annotate -a fixed.regions.bed -c CHROM,FROM,TO,NOTE -h annot.hdr common_vs_ref.merged1.vcf.gz -o common_vs_ref.merged.vcf.gz
+    bcftools index  common_vs_ref.merged.vcf.gz
+else
+    mv common_vs_ref.merged1.vcf.gz common_vs_ref.merged.vcf.gz
+    mv common_vs_ref.merged1.vcf.gz.csi common_vs_ref.merged.vcf.gz.csi
 fi
+
+## Filtering concordant variants
+bcftools filter -m+ -s CONCORDANT -e 'AN=N_SAMPLES && N_ALT=1' common_vs_ref.merged.vcf.gz -o common_vs_ref.merged.discordant.vcf.gz
+bcftools index common_vs_ref.merged.discordant.vcf.gz
 """
 }
 
