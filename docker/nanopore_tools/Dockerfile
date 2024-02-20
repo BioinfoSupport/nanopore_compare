@@ -1,21 +1,19 @@
-# Building paf2chain stage
-FROM docker://rust:1.76.0 as builder
+### Building paf2chain stage
+FROM docker://rust:1.76.0 as rust_builder
 
 WORKDIR /usr/src/paf2chain
 COPY paf2chain .
 RUN cargo install --path .
 
-
-# Main stage
-FROM docker://bioconductor/bioconductor_docker:3.18
-
-RUN Rscript -e 'BiocManager::install(c("data.table", "R.utils", "GenomicAlignments", "VariantAnnotation"))'
+### Build the rest: Flye and samtools/htslib
+FROM docker://ubuntu:22.04 as builder
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install -y --no-install-recommends \
-    bcftools \
     bzip2 \
     cmake \
+    curl \
     gcc \
+    g++ \
     git \
     libbz2-dev \
     libcurl4-openssl-dev \
@@ -26,12 +24,12 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install 
     python-is-python3 \
     python3-pip \
     python3.10 \
+    python3.10-dev \
     python3.10-venv \
-    tabix \
-    wget \
     zlib1g-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
 
 WORKDIR /
 RUN git clone -b 2.9.3 --depth 1 https://github.com/fenderglass/Flye
@@ -45,12 +43,9 @@ RUN make && \
 WORKDIR /
 RUN rm -rf Flye
 
+
 RUN pip3 install "medaka==1.11.2" && \
     rm -rf /root/.cache
-## Do this from workflow cache ?
-# && \
-#     cd /usr/local/lib64/python3.10/site-packages/medaka/data/ && \
-#     curl -L -O https://github.com/nanoporetech/medaka/raw/master/medaka/data/r1041_e82_400bps_sup_g615_model.tar.gz
 
 ARG hts_ver=1.19
 WORKDIR /htslib
@@ -74,15 +69,28 @@ RUN ./configure && \
 WORKDIR /
 RUN rm -rf htslib
 
+
+
+### Main stage
+FROM docker://ubuntu:22.04
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install -y --no-install-recommends \
+    bzip2 \
+    curl \
+    python-is-python3 \
+    python3-pip \
+    python3.10 \
+    python3.10-venv \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+
 # Copy paf2chain from the build stage
-COPY --from=builder /usr/local/cargo/bin/paf2chain /usr/local/bin/paf2chain
+COPY --from=rust_builder /usr/local/cargo/bin/* /usr/local/bin/
+COPY --from=builder /usr/local/bin/* /usr/local/bin/
+COPY --from=builder /usr/local/lib/python3.10/dist-packages /usr/local/lib/python3.10/dist-packages
 
 RUN pip3 install CrossMap && \
     rm -rf /root/.cache
 
 WORKDIR /
-
-	## Cleanup
-	# Not needed in the image
-	#dnf erase -y cmake gcc-g++ make zlib-devel git python3-devel ncurses-devel bzip2-devel xz-devel
-#	dnf clean all

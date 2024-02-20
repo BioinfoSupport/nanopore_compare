@@ -74,7 +74,7 @@ process GET_CLAIR3_MODEL {
 
     script:
     """
-wget https://cdn.oxfordnanoportal.com/software/analysis/models/clair3/${model}.tar.gz
+curl -O https://cdn.oxfordnanoportal.com/software/analysis/models/clair3/${model}.tar.gz
 tar xvzf ${model}.tar.gz
     """
 }
