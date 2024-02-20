@@ -288,7 +288,7 @@ process MERGE_COMMON_CALL_FILES {
 
     output:
     tuple path('common_vs_ref.merged.vcf.gz'), path('common_vs_ref.merged.vcf.gz.csi')
-    tuple path('common_vs_ref.merged.discordant.vcf.gz'), path('common_vs_ref.merged.discordant.vcf.gz.csi')
+    tuple path('common_vs_ref.merged.discordant.vcf.gz'), path('common_vs_ref.merged.discordant.vcf.gz.csi'), optional: true
 
     script:
     """
@@ -297,7 +297,7 @@ for f in vcf*.vcf.gz; do
 done
 if [ -f vcf.vcf.gz ]; then # Single file given, no merge needed
     cp vcf.vcf.gz common_vs_ref.merged.vcf.gz
-    mv vcf.vcf.gz.csi common_vs_ref.merged.vcf.gz-csi
+    mv vcf.vcf.gz.csi common_vs_ref.merged.vcf.gz.csi
 else
     cat > samples_in_config.txt <<EOF
 ${params.concordance_samples.join("\n")}
@@ -349,6 +349,6 @@ process CONVERT_VCF_TO_TABLE {
 echo -ne 'CHROM\tPOS\tREF\tALT\tFILTER\tQUAL\tINFO/DP\tGENE\tNOTE' > common_variants.tsv
 bcftools query -l ${vcf} | while read s; do echo -ne "\t\$s"; done >> common_variants.tsv
 echo >> common_variants.tsv
-bcftools query -f '%CHROM\t%POS\t%REF\t%ALT\t%FILTER\t%QUAL\t%INFO/DP\t%GENE\t%NOTE[\t%TGT]\n' ${vcf} >> common_variants.tsv
+bcftools query -u -f '%CHROM\t%POS\t%REF\t%ALT\t%FILTER\t%QUAL\t%INFO/DP\t%GENE\t%NOTE[\t%TGT]\n' ${vcf} >> common_variants.tsv
 """
 }

@@ -674,6 +674,12 @@ workflow {
     SNIFFLES_CALL(ref, MAP_READS_TO_REF.out)
 }
 workflow.onComplete = {
-  println "DONE!"
-  println "Info: $workflow"
+    file = new File(params.data_dir+"/workflow.log").newWriter()
+    file << "Info: $workflow\n"
+    file << "git status:\n"
+    file << "git status -s -b".execute().text
+    file << "git hash:\n"
+    file << "git rev-parse --short HEAD".execute().text
+    file << "DONE!\n"
+    file.close()
 }
