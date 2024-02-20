@@ -1,0 +1,11 @@
+*~
+*#
+.#*
+.Rhistory
+shared
+data
+data_nf
+work
+.nextflow*
+singularity/sandbox
+store_dir

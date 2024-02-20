@@ -1,0 +1,3 @@
+[submodule "docker/nanopore_tools/paf2chain"]
+	path = docker/nanopore_tools/paf2chain
+	url = https://github.com/AndreaGuarracino/paf2chain.git
