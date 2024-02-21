@@ -31,6 +31,9 @@ params.regions_annotation = "regions.bed"
 params.medaka_lowq = "20"
 
 
+import groovy.json.JsonOutput
+
+
 ////////////////////////////////////////////////////////////////////////
 // Consensus generation
 ////////////////////////////////////////////////////////////////////////
@@ -570,26 +573,6 @@ fi
 }
 
 
-import groovy.json.JsonOutput
-
-process SAVE_PARAMS {
-    publishDir mode: "link", path: "${file(params.data_dir)}"
-
-    input:
-    val(workflowParams)
-
-    output:
-    path("params.json")
-
-    script:
-    json_str = JsonOutput.toJson(workflowParams)
-    json_indented = JsonOutput.prettyPrint(json_str)
-    // NOTE: single quotes are critical here;
-    """
-echo '${json_indented}' > params.json
-    """
-}
-
 
 
 
@@ -618,8 +601,6 @@ workflow {
 //        .view { "Using sample ${it}" }
 	.set { fastq }
 
-    SAVE_PARAMS(params)
-    
     medaka_model_path = GET_MEDAKA_MODEL(params.medaka_model) // | view { "medaka model ${it}" }
     medaka_variant_model_path = GET_MEDAKA_VARIANT_MODEL(params.medaka_variant_model) // | view { "medaka variant model ${it}" }
     clair_model_path = GET_CLAIR3_MODEL(params.claire3_model) // | view { "claire model ${it}" }
@@ -675,11 +656,19 @@ workflow {
 }
 workflow.onComplete = {
     file = new File(params.data_dir+"/workflow.log").newWriter()
-    file << "Info: $workflow\n"
+    file << "Info:\n"
+    file << "$workflow" << "\n\n"
     file << "git status:\n"
     file << "git status -s -b".execute().text
     file << "git hash:\n"
     file << "git rev-parse --short HEAD".execute().text
-    file << "DONE!\n"
+    file << "\nDONE!\n"
     file.close()
+    
+    file = new File(params.data_dir+"/params.json").newWriter()
+    json_str = JsonOutput.toJson(params)
+    json_indented = JsonOutput.prettyPrint(json_str)
+    file << json_indented << "\n"
+    file.close()
+    
 }
