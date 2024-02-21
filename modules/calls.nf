@@ -19,11 +19,11 @@ process MEDAKA_CALL {
 medaka_haploid_variant -i ${fastq} -r ${ref_fa} -m ${medaka_model_path} \
         -t ${task.cpus} -o medaka.reads_vs_ref
 ## Fix of strange annotation mistake -- medaka duplicates some vcf lines?
-awk '/^##/ {print; next};
-     /^#CHROM/ {sub(/SAMPLE/, "${meta.name}"); print; next};
-     (\$1":"\$2) in seen {next};
-     {seen[\$1":"\$2]=1; print}' \
-        medaka.reads_vs_ref/medaka.annotated.vcf | bgzip > medaka.reads_vs_ref.vcf.gz
+## Also attempt to "standardize" the calls
+echo '${meta.name}' >sample.txt
+bcftools sort medaka.reads_vs_ref/medaka.annotated.vcf | \
+    bcftools reheader -s sample.txt - | \
+    bcftools norm -d exact -a - -o medaka.reads_vs_ref.vcf.gz
 bcftools index medaka.reads_vs_ref.vcf.gz
     """
     stub:
@@ -56,8 +56,8 @@ minimap2 -cx asm5 --cs -z1000000 ${ref_fa} ${fastq} | \
 
 minimap2 -cx asm5 --cs -z1000000 ${ref_fa} ${fastq} | \
     sort -k6,6 -k8,8n | paftools.js call -s ${meta.name} -f ${ref_fa} -l0 -L0 -q0 - | \
-    bcftools sort - | \
-    bgzip > mm2.cons_vs_ref.vcf.gz
+    bcftools sort - |
+    bcftools norm -a - -o mm2.cons_vs_ref.vcf.gz
 bcftools index mm2.cons_vs_ref.vcf.gz
 """
     stub:

@@ -14,24 +14,54 @@ params.medaka_variant_model = "r1041_e82_400bps_sup_variant_g615"
 params.claire3_platform = "ont"
 params.claire3_model = "r1041_e82_400bps_sup_g615"
 
-params.sample_fastqs = ["data/nanopore/barcode01.guppy.pass.fastq.gz","data/nanopore/barcode02.guppy.pass.fastq.gz"]
-params.exclude_samples = ["barcode09","barcode10","barcode11"]
-params.concordance_samples = ["barcode01","barcode02"]
-params.consensus_ref_sample = "barcode01"
+// params.sample_fastqs = ["data/nanopore/barcode01.guppy.pass.fastq.gz","data/nanopore/barcode02.guppy.pass.fastq.gz"]
+// params.exclude_samples = ["barcode09","barcode10","barcode11"]
+// params.concordance_samples = ["barcode01","barcode02"]
+// params.consensus_ref_sample = "barcode01"
 
 params.ref_fa = "data/saureus/Saureus8325.fasta"
 params.ref_id = "SA8325"
+params.ref_gff = "data/saureus/Saureus8325.gff"
 params.gene_annotation_bed = "data/saureus/Saureus8325_gene_annotations.bed"
 
 params.store_dir = "store_dir"
-params.data_dir = "data_nf/old_nanopore_test"
+// params.data_dir = "data_nf/old_nanopore_test"
 
 params.regions_annotation = "regions.bed"
 // Some marginal calls appear
 params.medaka_lowq = "20"
 
+params.prokka_args = "--usegenus --genus Staphylococcus --species aureus --strain 8325-4"
 
 import groovy.json.JsonOutput
+
+
+include {
+    GET_MEDAKA_MODEL;
+    GET_MEDAKA_MODEL as GET_MEDAKA_VARIANT_MODEL;
+    GET_CLAIR3_MODEL;
+    CRAM_TO_FASTQ_GZ
+} from "./modules/utils.nf"
+
+include {
+    MEDAKA_CALL as MEDAKA_CALL_VS_REF;
+    MEDAKA_CALL as MEDAKA_CALL_VS_CONSENSUS
+    MM2_CALL as MM2_CALL_VS_REF;
+    MM2_CALL as MM2_CALL_VS_CONSENSUS
+    CLAIR3_CALL
+    CLAIR3_CALL_SENSITIVE
+    SNIFFLES_CALL
+    REMAP_CONSENSUS_TO_REFERENCE;
+    REMAP_CONSENSUS_TO_REFERENCE as REMAP_CONSENSUS_TO_REFERENCE_CONS
+    MM2_CALL_ANNOTATE;
+    MM2_CALL_ANNOTATE as MM2_CALL_ANNOTATE_CONS;
+    MERGE_MEDAKA_AND_CONS_CALLS;
+    MERGE_MEDAKA_AND_CONS_CALLS as MERGE_MEDAKA_AND_CONS_CALLS_CONS_NOLIFT
+    MERGE_MEDAKA_AND_CONS_CALLS as MERGE_MEDAKA_AND_CONS_CALLS_CONS
+    MERGE_COMMON_CALL_FILES;
+    MERGE_COMMON_CALL_FILES as MERGE_COMMON_CALL_FILES_CONS;
+    CONVERT_VCF_TO_TABLE;
+    CONVERT_VCF_TO_TABLE as CONVERT_VCF_TO_TABLE_CONS} from  './modules/calls.nf'
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -49,7 +79,6 @@ process FLYE_ASSEMBLE {
 
     output:
     tuple val(meta), path("flye/assembly.fasta")
-    tuple val(meta), path("flye/assembly_info.txt"), path("flye/assembly_graph.gfa")
     tuple val(meta), path("flye/*")
 
     script:
@@ -64,23 +93,6 @@ touch flye/assembly.fasta flye/assembly_info.txt flye/assembly_graph.gfa
     """
 }
 
-
-// Get medaka model into the store_dir/medaka based on the model name
-process GET_CLAIR3_MODEL {
-    storeDir "${params.store_dir}/clair"
-    
-    input:
-    val(model)
-
-    output:
-    path("${model}")
-
-    script:
-    """
-curl -O https://cdn.oxfordnanoportal.com/software/analysis/models/clair3/${model}.tar.gz
-tar xvzf ${model}.tar.gz
-    """
-}
 
 // Polish the draft consensus assembly, and save it as fastq, so qualities are avilable
 process MEDAKA_POLISH {
@@ -130,6 +142,7 @@ minimap2 -I 16G -x map-ont -d seq.fasta.map-ont.mmi seq.fasta
 }
 
 // Add mmi to the original reference
+// Quite hacky
 process FASTA_ADD_MMI {
     storeDir "${file(params.ref_fa).getParent()}"
     
@@ -147,34 +160,6 @@ minimap2 -I 16G -x map-ont -d ${mmi} ${ref}
     """
 }
 
-// Utility conversion
-process BAM_TO_FASTA {
-    input:
-    tuple val(meta), path(bam)
-
-    output:
-    tuple val(meta), path("seq.fasta"), path("seq.fasta.fai")
-
-    script:
-    """
-samtools fasta ${bam} > seq.fasta
-samtools faidx seq.fasta
-    """
-}
-
-process CRAM_TO_FASTQ {
-    input:
-    tuple val(meta), path(cram)
-
-    output:
-    tuple val(meta), file("${meta.name}.fastq.gz")
-
-    script:
-    """
-samtools bam2fq -T 1 ${cram} | gzip > ${meta.name}.fastq.gz
-    """
-}
-
 // Generate the polished consensus and return it
 workflow POLISHED_CONSENSUS {
     take:
@@ -184,7 +169,7 @@ workflow POLISHED_CONSENSUS {
     main:
 
     draft = FLYE_ASSEMBLE(fastq)
-    // Have to join mathcing on meta to have draft and fastq in sync
+    // Have to join matching on meta to have draft and fastq in sync
     polished = MEDAKA_POLISH(draft[0].join(fastq), medaka_model_path)
 
     emit:
@@ -194,72 +179,27 @@ workflow POLISHED_CONSENSUS {
 ////////////////////////////////////////////////////////////////////////
 
 
-include {
-    GET_MEDAKA_MODEL;
-    GET_MEDAKA_MODEL as GET_MEDAKA_VARIANT_MODEL } from "./modules/utils.nf"
-
-// Calling using medaka haploid caller
-include {
-    MEDAKA_CALL as MEDAKA_CALL_VS_REF;
-    MEDAKA_CALL as MEDAKA_CALL_VS_CONSENSUS } from './modules/calls.nf'
-
-include {
-    MM2_CALL as MM2_CALL_VS_REF;
-    MM2_CALL as MM2_CALL_VS_CONSENSUS } from './modules/calls.nf'
-
-include { CLAIR3_CALL } from './modules/calls.nf'
-include { CLAIR3_CALL_SENSITIVE } from './modules/calls.nf'
-include { SNIFFLES_CALL } from './modules/calls.nf'
-include { REMAP_CONSENSUS_TO_REFERENCE;
-         REMAP_CONSENSUS_TO_REFERENCE as REMAP_CONSENSUS_TO_REFERENCE_CONS} from './modules/calls.nf'
-include { MM2_CALL_ANNOTATE;
-         MM2_CALL_ANNOTATE as MM2_CALL_ANNOTATE_CONS;
-	 MERGE_MEDAKA_AND_CONS_CALLS;
-	 MERGE_MEDAKA_AND_CONS_CALLS as MERGE_MEDAKA_AND_CONS_CALLS_CONS} from './modules/calls.nf'
-include { MERGE_COMMON_CALL_FILES;
-	 MERGE_COMMON_CALL_FILES as MERGE_COMMON_CALL_FILES_CONS;
-	 CONVERT_VCF_TO_TABLE;
-	 CONVERT_VCF_TO_TABLE as CONVERT_VCF_TO_TABLE_CONS} from  './modules/calls.nf'
 
 
-process ADD_ASSEMBLY_PAF_FOR_LIFTOVER {
-    publishDir mode: 'link', path: "${file(params.data_dir)/cons_meta.name}",
-	pattern: "*.paf",
-	saveAs: { it.replaceFirst(/ref/,ref_meta.name) }
+// Just direct mapping of the reads to the reference, for IGV manual control
+process MAP_READS_TO_REF {
+    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
+	saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
 
     input:
-    tuple val(ref_meta), path(ref_fa), path(ref_fa_fai)
-    tuple val(cons_meta), path(cons_fastx), path(cons_fastx_fai), path(cons_mmi)
+    tuple val(ref_meta), path(ref_fa), path(ref_fa_fai), path(ref_fa_mmi)
+    tuple val(meta), path(fastq)
 
     output:
-    tuple val(cons_meta), path(cons_fastx), path(cons_fastx_fai), path(cons_mmi), path("consensus_vs_ref.mm2.paf")
+    tuple val(meta), path("reads_vs_ref.bam"), path("reads_vs_ref.bam.bai")
 
     script:
     """
-minimap2 -un -cx asm5 --cs ${ref_fa} ${cons_fastx} > consensus_vs_ref.mm2.paf
-"""
-}
-
-process ADD_ASSEMBLY_CHAIN_FOR_LIFTOVER {
-    publishDir mode: 'link', path: "${file(params.data_dir)/cons_meta.name}",
-	pattern: "*.paf",
-	saveAs: { it.replaceFirst(/ref/,ref_meta.name) }
-
-    input:
-    tuple val(ref_meta), path(ref_fa), path(ref_fa_fai)
-    tuple val(cons_meta), path(cons_fastx), path(cons_fastx_fai), path(cons_mmi)
-
-    output:
-    tuple val(cons_meta), path(cons_fastx), path(cons_fastx_fai), path(cons_mmi), path("ref_vs_consensus.chain")
-
-    script:
+minimap2 -cx map-ont -t${task.cpus} --cs -a ${ref_fa_mmi} ${fastq} | \
+    samtools sort -o reads_vs_ref.bam -
+samtools index reads_vs_ref.bam
     """
-minimap2 -un -cx asm5 ${cons_fastx} ${ref_fa} > ref_vs_consensus.mm2.paf
-paf2chain --input ref_vs_consensus.mm2.paf > ref_vs_consensus.chain
-"""
 }
-
-
 
 
 workflow CALL_VS_REF {
@@ -289,7 +229,7 @@ workflow CALL_VS_REF {
 
     joined_vcfs = MERGE_MEDAKA_AND_CONS_CALLS(reference_fasta_nommi, vcfs.join(vcfs_mm2_annotated))
     
-    // Bad emin?
+    // Bad emit?
     emit:
     vcfs[0]
     vcfs_mm2_annotated
@@ -297,13 +237,65 @@ workflow CALL_VS_REF {
 }
 
 
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////
+// Calling versus the consensus of one of the samples
+////////////////////////////////////////////////////////////////////////
+
+process ADD_ASSEMBLY_PAF_FOR_LIFTOVER {
+    publishDir mode: 'link', path: "${file(params.data_dir)/cons_meta.name}",
+	pattern: "*.paf",
+	saveAs: { it.replaceFirst(/ref/,ref_meta.name) }
+
+    input:
+    tuple val(ref_meta), path(ref_fa), path(ref_fa_fai)
+    tuple val(cons_meta), path(cons_fastx), path(cons_fastx_fai), path(cons_mmi)
+
+    output:
+    tuple val(cons_meta), path(cons_fastx), path(cons_fastx_fai), path(cons_mmi), path("consensus_vs_ref.mm2.paf")
+
+    script:
+    """
+minimap2 -un -cx asm5 --cs ${ref_fa} ${cons_fastx} > consensus_vs_ref.mm2.paf
+    """
+}
+
+process ADD_ASSEMBLY_CHAIN_FOR_LIFTOVER {
+    publishDir mode: 'copy', path: "${file(params.data_dir)/cons_meta.name}",
+	saveAs: { it.replaceFirst(/ref/,ref_meta.name) }
+
+    input:
+    tuple val(ref_meta), path(ref_fa), path(ref_fa_fai)
+    tuple val(cons_meta), path(cons_fastx), path(cons_fastx_fai), path(cons_mmi)
+
+    output:
+    tuple val(cons_meta), path("consensus.fasta"), path("consensus.fasta.fai"), path("consensus.fasta.map-ont.mmi"), path("ref_vs_consensus.chain")
+
+    script:
+    """
+minimap2 -un -cx asm5 ${cons_fastx} ${ref_fa} > ref_vs_consensus.mm2.paf
+ln ${cons_fastx} consensus.fasta
+ln ${cons_fastx_fai} consensus.fasta.fai
+ln ${cons_mmi} consensus.fasta.map-ont.mmi
+paf2chain --input ref_vs_consensus.mm2.paf > ref_vs_consensus.chain
+    """
+}
+
+// Problem: --no-comp-alleles produces bad result in case of "restoring" SNP. What is teh way arond this?
 process LIFTOVER_MEDAKA_CALLS {
     publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
 	saveAs: { it.replaceFirst(/ref/, paf_meta.name) }
     
     input:
     tuple val(paf_meta), path(fastx), path(fai), path(mmi), path(chain)
-    tuple val(ref_meta), path(ref_fasta)
+    tuple val(ref_meta), path(ref_fasta), path(_ref_fasta_fai)
     tuple val(meta), path(vcf), path(vcf_csi)
 
     output:
@@ -311,10 +303,9 @@ process LIFTOVER_MEDAKA_CALLS {
     
     script:
     """
-CrossMap vcf ${chain} ${vcf} ${ref_fasta} medaka.reads_vs_ref.lifted.vcf
+CrossMap vcf --no-comp-alleles ${chain} ${vcf} ${ref_fasta} medaka.reads_vs_ref.lifted.vcf
 bcftools sort medaka.reads_vs_ref.lifted.vcf -o medaka.reads_vs_ref.lifted.vcf.gz
 bcftools index medaka.reads_vs_ref.lifted.vcf.gz
-
     """
 }
 
@@ -324,7 +315,7 @@ process LIFTOVER_MM2_CALLS {
 
     input:
     tuple val(paf_meta), path(fastx), path(fai), path(mmi), path(chain)
-    tuple val(ref_meta), path(ref_fasta)
+    tuple val(ref_meta), path(ref_fasta), path(ref_fasta_fai)
     tuple val(meta), path(vcf), path(vcf_csi)
 
     output:
@@ -332,38 +323,17 @@ process LIFTOVER_MM2_CALLS {
     
     script:
     """
-CrossMap vcf ${chain} ${vcf} ${ref_fasta} mm2.cons_vs_ref.lifted.vcf
+CrossMap vcf --no-comp-alleles ${chain} ${vcf} ${ref_fasta} mm2.cons_vs_ref.lifted.vcf
 bcftools sort mm2.cons_vs_ref.lifted.vcf -o mm2.cons_vs_ref.lifted.vcf.gz
 bcftools index mm2.cons_vs_ref.lifted.vcf.gz
-
     """
 }
 
-
-// Just direct mapping of the reads to the reference, for IGV manual control
-process MAP_READS_TO_REF {
-    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
-	saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
-
-    input:
-    tuple val(ref_meta), path(ref_fa), path(ref_fa_fai), path(ref_fa_mmi)
-    tuple val(meta), path(fastq)
-
-    output:
-    tuple val(meta), path("reads_vs_ref.bam"), path("reads_vs_ref.bam.bai")
-
-    script:
-    """
-minimap2 -cx map-ont -t${task.cpus} --cs -a ${ref_fa_mmi} ${fastq} | \
-    samtools sort -o reads_vs_ref.bam -
-samtools index reads_vs_ref.bam
-    """
-}
 
 // TODO Report missing coordinates
 workflow CALL_VS_CONS {
     take:
-    reference_paf_and_fasta
+    consensus_reference_paf_and_fasta
     cons_fastq
     fastq
     medaka_model_path
@@ -372,9 +342,9 @@ workflow CALL_VS_CONS {
     main:
 
     // Remove paf for those who does not need
-    reference_fasta_mmi = reference_paf_and_fasta.map({[it[0], it[1], it[2], it[3]]})
+    reference_fasta_mmi = consensus_reference_paf_and_fasta.map({[it[0], it[1], it[2], it[3]]})
     // and also remove the mmi index
-    reference_fasta = reference_paf_and_fasta.map({[it[0], it[1], it[2]]})
+    reference_fasta = consensus_reference_paf_and_fasta.map({[it[0], it[1], it[2]]})
     
     vcfs = MEDAKA_CALL_VS_CONSENSUS(reference_fasta_mmi, fastq, medaka_model_path)
     vcfs_mm2 = MM2_CALL_VS_CONSENSUS(reference_fasta, cons_fastq)
@@ -389,10 +359,14 @@ workflow CALL_VS_CONS {
 	    .join(
 		bam.map({[it[0],it[1]]})))
 
-    lift_vcfs = LIFTOVER_MEDAKA_CALLS(reference_paf_and_fasta, ref, vcfs[0]) // | map( {it.subList(0,3)} )
-    lift_vcfs_mm2 = LIFTOVER_MM2_CALLS(reference_paf_and_fasta, ref, vcfs_mm2_annotated[0]) // | map( {it.subList(0,3)} )
 
-    // Mabe also join before liftover?
+    // Before liftover
+    joined_vcfs_nolift = MERGE_MEDAKA_AND_CONS_CALLS_CONS_NOLIFT(reference_fasta,
+								 vcfs[0].join(vcfs_mm2_annotated[0]) )
+    // Lifted files
+    lift_vcfs = LIFTOVER_MEDAKA_CALLS(consensus_reference_paf_and_fasta, ref, vcfs[0]) // | map( {it.subList(0,3)} )
+    lift_vcfs_mm2 = LIFTOVER_MM2_CALLS(consensus_reference_paf_and_fasta, ref, vcfs_mm2_annotated[0]) // | map( {it.subList(0,3)} )
+
     joined_vcfs = MERGE_MEDAKA_AND_CONS_CALLS_CONS(reference_fasta,
 						   lift_vcfs.map( {it.subList(0,3)} )
 						   .join(lift_vcfs_mm2.map( {it.subList(0,3)} )))
@@ -401,8 +375,103 @@ workflow CALL_VS_CONS {
     lift_vcfs[0]
     lift_vcfs_mm2[0]
     joined_vcfs
+    joined_vcfs_nolift
 }
 
+
+
+
+
+
+process PROKKA_ANNOTATE {
+    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}"
+    
+    input:
+    tuple val(meta), path(fasta), path(fai), path(mmi)
+
+    output:
+    tuple val(meta), path("prokka_annotation")
+
+    script:
+    """
+prokka --outdir prokka_annotation --prefix ${meta.name} --cpus ${task.cpus} ${params.prokka_args} ${fasta}
+    """
+}
+
+
+process ADD_GENOME_JSON {
+    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}"
+    cpus = 1
+
+    input:
+    tuple val(meta), path("prokka_annotation")
+
+    output:
+    tuple val(meta), path("${meta.name}.genome.json")
+    path("prokka_annotation/${meta.name}.fsa.fai")
+
+    script:
+    """
+samtools faidx prokka_annotation/${meta.name}.fsa
+cat > ${meta.name}.genome.json <<EOF
+{
+  "id": "${meta.name}",
+  "name": "${meta.name}",
+  "fastaURL": "prokka_annotation/${meta.name}.fsa",
+  "indexURL": "prokka_annotation/${meta.name}.fsa.fai",
+  "tracks": [
+    {
+      "name": "Prokka Genes",
+      "format": "gff",
+      "url": "prokka_annotation/${meta.name}.gff"
+    }
+  ]
+}
+EOF
+    """
+}
+
+process LIFTOVER_REF_ANNOTATIONS {
+    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}"
+    cpus = 1
+    
+    input:
+    tuple val(ref_meta), path(ref_fasta)
+    tuple val(meta), path(fasta), path(fai), path(mmi)
+    path(ref_gff)
+
+    output:
+    path("${ref_meta.name}.lifted.gff")
+    
+    script:
+    """
+minimap2 -un -cx asm5 ${ref_fasta} ${fasta} >liftover.paf
+paf2chain --input liftover.paf >liftover.chain
+CrossMap gff liftover.chain ${ref_gff} lifted.gff
+(
+  head -1 ${ref_gff}
+  cat lifted.gff
+) > ${ref_meta.name}.lifted.gff
+    """
+
+}
+
+
+workflow ANNOTATE_CONSENSUS {
+    take:
+    ref
+    cons
+
+    main:
+
+    PROKKA_ANNOTATE(cons) | ADD_GENOME_JSON
+    LIFTOVER_REF_ANNOTATIONS(ref, cons, channel.fromPath(params.ref_gff))
+    
+//    emit:
+}
+
+
+////////////////////// Final VCF merging processes
 
 process MERGE_VCFS {
     publishDir mode: 'link', path: "${file(params.data_dir)}",
@@ -575,7 +644,7 @@ fi
 
 
 
-
+///////////////////////////   Main workflow
 workflow {
     input_files = Channel
 	.fromPath(params.sample_fastqs)
@@ -597,7 +666,7 @@ workflow {
 	.set { fastq_split_by_type }
     fastq_split_by_type
 	.fastq
-	.concat(CRAM_TO_FASTQ(fastq_split_by_type.cram))
+	.concat(CRAM_TO_FASTQ_GZ(fastq_split_by_type.cram))
 //        .view { "Using sample ${it}" }
 	.set { fastq }
 
@@ -617,6 +686,8 @@ workflow {
 	FASTQ_TO_FASTA_MMI
     cons_ref_paf_fasta = ADD_ASSEMBLY_CHAIN_FOR_LIFTOVER(ref, cons_ref_fasta)
 
+    ANNOTATE_CONSENSUS(ref, cons_ref_fasta)
+    
     other_fastq = fastq.filter({
 	it[0].name != params.consensus_ref_sample})
     other_cons_fastq = POLISHED_CONSENSUS.out.filter({
@@ -654,8 +725,10 @@ workflow {
     // Marginally useful
     SNIFFLES_CALL(ref, MAP_READS_TO_REF.out)
 }
+
+// Dump the workflow parameters and current directory git status
 workflow.onComplete = {
-    file = new File(params.data_dir+"/workflow.log").newWriter()
+    file = new File(params.data_dir, "workflow.log").newWriter()
     file << "Info:\n"
     file << "$workflow" << "\n\n"
     file << "git status:\n"
@@ -665,7 +738,7 @@ workflow.onComplete = {
     file << "\nDONE!\n"
     file.close()
     
-    file = new File(params.data_dir+"/params.json").newWriter()
+    file = new File(params.data_dir, "params.json").newWriter()
     json_str = JsonOutput.toJson(params)
     json_indented = JsonOutput.prettyPrint(json_str)
     file << json_indented << "\n"
