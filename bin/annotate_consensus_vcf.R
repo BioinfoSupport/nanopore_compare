@@ -5,23 +5,22 @@ library(VariantAnnotation)
 
 annotate_mm2_vranges <- function(cons_vcf_file, cons_bam, min_bam_mapq = 60) {
     bam <- readGAlignments(cons_bam,
-                           param = ScanBamParam(flag = scanBamFlag(isSecondaryAlignment = FALSE),
+                           param = ScanBamParam(flag = scanBamFlag(isSecondaryAlignment = FALSE,
+                                                                   isSupplementaryAlignment = FALSE),
                                                 what = c("flag", "qual", "mapq")),
                            use.names = TRUE)
-    bam <- bam[mcols(bam)$mapq >= min_bam_mapq]
+    ## bam <- bam[mcols(bam)$mapq >= min_bam_mapq]
 
     vr <- readVcfAsVRanges(cons_vcf_file)
-
-    mm <- mapToAlignments(vr, bam)
-
+    
     ## We are haploid, so remove alleles
     ## TODO: Why it was in diploid form anyway?
     vr$GT <- substring(vr$GT,1,1)
     mcols(vr)$GQ <- as(
-                 subseq(mcols(bam)$qual[mm$alignmentsHits], start(mm), width=1),
+                 subseq(mcols(bam[vr$QNAME])$qual, vr$QSTART, width=1),
                  "IntegerList")
     mcols(vr)$CONS3Q <- as(
-                 subseq(mcols(bam)$qual[mm$alignmentsHits], start(mm)-1, width=3),
+                 subseq(mcols(bam[vr$QNAME])$qual, vr$QSTART, width=3),
                  "IntegerList")
     vr$QUAL <- as.numeric(vr$GQ)
 

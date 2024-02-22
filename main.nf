@@ -33,6 +33,8 @@ params.medaka_lowq = "20"
 
 params.prokka_args = "--usegenus --genus Staphylococcus --species aureus --strain 8325-4"
 
+params.minimap2_cs_tag = "--cs"
+
 import groovy.json.JsonOutput
 
 
@@ -195,7 +197,7 @@ process MAP_READS_TO_REF {
 
     script:
     """
-minimap2 -cx map-ont -t${task.cpus} --cs -a ${ref_fa_mmi} ${fastq} | \
+minimap2 -ax map-ont -t${task.cpus} ${params.minimap2_cs_tag} ${ref_fa_mmi} ${fastq} | \
     samtools sort -o reads_vs_ref.bam -
 samtools index reads_vs_ref.bam
     """
@@ -248,6 +250,27 @@ workflow CALL_VS_REF {
 ////////////////////////////////////////////////////////////////////////
 // Calling versus the consensus of one of the samples
 ////////////////////////////////////////////////////////////////////////
+
+// Just direct mapping of the reads to the consensus, for IGV manual control
+// Full copy of MAP_TO_REF
+process MAP_READS_TO_CONS {
+    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
+	saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
+
+    input:
+    tuple val(ref_meta), path(ref_fa), path(ref_fa_fai), path(ref_fa_mmi)
+    tuple val(meta), path(fastq)
+
+    output:
+    tuple val(meta), path("reads_vs_ref.bam"), path("reads_vs_ref.bam.bai")
+
+    script:
+    """
+minimap2 -ax map-ont -t${task.cpus} ${params.minimap2_cs_tag} ${ref_fa_mmi} ${fastq} | \
+    samtools sort -o reads_vs_ref.bam -
+samtools index reads_vs_ref.bam
+    """
+}
 
 process ADD_ASSEMBLY_PAF_FOR_LIFTOVER {
     publishDir mode: 'link', path: "${file(params.data_dir)/cons_meta.name}",
@@ -424,6 +447,11 @@ cat > ${meta.name}.genome.json <<EOF
       "name": "Prokka Genes",
       "format": "gff",
       "url": "prokka_annotation/${meta.name}.gff"
+    },
+    {
+      "name": "Liftover ${params.ref_id}",
+      "format": "gff",
+      "url": "${params.ref_id}.lifted.gff"
     }
   ]
 }
@@ -436,7 +464,7 @@ process LIFTOVER_REF_ANNOTATIONS {
     cpus = 1
     
     input:
-    tuple val(ref_meta), path(ref_fasta)
+    tuple val(ref_meta), path(ref_fasta), path(ref_fai)
     tuple val(meta), path(fasta), path(fai), path(mmi)
     path(ref_gff)
 
@@ -464,8 +492,8 @@ workflow ANNOTATE_CONSENSUS {
 
     main:
 
-    PROKKA_ANNOTATE(cons) | ADD_GENOME_JSON
     LIFTOVER_REF_ANNOTATIONS(ref, cons, channel.fromPath(params.ref_gff))
+    PROKKA_ANNOTATE(cons) | ADD_GENOME_JSON
     
 //    emit:
 }
@@ -644,8 +672,12 @@ fi
 
 
 
-///////////////////////////   Main workflow
+////////////////////////////////////////////////////////////////////////
+////    Main workflow
+////////////////////////////////////////////////////////////////////////
 workflow {
+
+    //// Input file preparation ////////////////////////////////////////
     input_files = Channel
 	.fromPath(params.sample_fastqs)
 	.map( {
@@ -653,9 +685,6 @@ workflow {
 		[meta, it]
 	    } )
         .filter( { !params.exclude_samples.contains(it[0].name) } )
-
-    ref = channel.value([[name: params.ref_id], file(params.ref_fa), file(params.ref_fa+".fai")])
-    ref_mmi = ref | FASTA_ADD_MMI // | view { "Using reference ${it}"}
 
     // Optionally convert CRAM/BAM to fastq    
     input_files
@@ -667,36 +696,29 @@ workflow {
     fastq_split_by_type
 	.fastq
 	.concat(CRAM_TO_FASTQ_GZ(fastq_split_by_type.cram))
-//        .view { "Using sample ${it}" }
+        // .view { "Using sample ${it}" }
 	.set { fastq }
 
+
+    //// Reference preparation /////////////////////////////////////////
+    ref = channel.value([[name: params.ref_id], file(params.ref_fa), file(params.ref_fa+".fai")])
+    ref_mmi = ref | FASTA_ADD_MMI // | view { "Using reference ${it}"}
+
+
+    //// Model download ////////////////////////////////////////////////
     medaka_model_path = GET_MEDAKA_MODEL(params.medaka_model) // | view { "medaka model ${it}" }
     medaka_variant_model_path = GET_MEDAKA_VARIANT_MODEL(params.medaka_variant_model) // | view { "medaka variant model ${it}" }
     clair_model_path = GET_CLAIR3_MODEL(params.claire3_model) // | view { "claire model ${it}" }
 
+
+    //// Consensus /////////////////////////////////////////////////////
     POLISHED_CONSENSUS(fastq, medaka_model_path)
     // POLISHED_CONSENSUS.out.cons_bam | view
+
+    //// Calling vs Reference //////////////////////////////////////////
     MAP_READS_TO_REF(ref_mmi, fastq)
-    
+
     CALL_VS_REF(ref_mmi, POLISHED_CONSENSUS.out, fastq, medaka_variant_model_path) // | view
-
-    // Calling vs selected sample
-    cons_ref_fasta = POLISHED_CONSENSUS.out.first({
-	it[0].name == params.consensus_ref_sample}) | 
-	FASTQ_TO_FASTA_MMI
-    cons_ref_paf_fasta = ADD_ASSEMBLY_CHAIN_FOR_LIFTOVER(ref, cons_ref_fasta)
-
-    ANNOTATE_CONSENSUS(ref, cons_ref_fasta)
-    
-    other_fastq = fastq.filter({
-	it[0].name != params.consensus_ref_sample})
-    other_cons_fastq = POLISHED_CONSENSUS.out.filter({
-	it[0].name != params.consensus_ref_sample})
-
-    CALL_VS_CONS(cons_ref_paf_fasta, other_cons_fastq, other_fastq, medaka_variant_model_path, ref) // | view
-
-    CALL_VS_CONS.out[0].map({it[1]}).collect() | MERGE_VCFS
-    CALL_VS_CONS.out[1].map({it[1]}).collect() | MERGE_VCFS_MM
 
     CALL_VS_REF.out[0].map({it[1]}).collect() | MERGE_READS_VS_REF_VCFS
     CALL_VS_REF.out[1].map({it[1]}).collect() | MERGE_READS_VS_REF_VCFS_MM
@@ -704,26 +726,51 @@ workflow {
     MERGE_COMMON_CALL_FILES(CALL_VS_REF.out[2].map({it[1]}).collect(),
 			    channel.fromPath(params.regions_annotation),
 			    ref)
+    // Here we take the discordant vcf
+    CONVERT_VCF_TO_TABLE(MERGE_COMMON_CALL_FILES.out[1].map({it[0]}), "common_variants.tsv")
+
+    //// CLAIR3 consensus calling /////////////////////////////////////
+    CLAIR3_CALL(ref, MAP_READS_TO_REF.out, clair_model_path)
+    CLAIR3_CALL.out.map({it[1]}).collect() | MERGE_CLAIR3_VCFS
+
+    CLAIR3_CALL_SENSITIVE(ref, MAP_READS_TO_REF.out, clair_model_path)
+    CLAIR3_CALL_SENSITIVE.out.map({it[1]}).collect() | MERGE_CLAIR3_SENSITIVE_VCFS
+
+    //// SNIFFLES consensus calling ///////////////////////////////
+    SNIFFLES_CALL(ref, MAP_READS_TO_REF.out)
+
+    //// End: Calling vs Reference //////////////////////////////////////////
+
+    
+    //// Calling vs selected sample consensus //////////////////////////
+    cons_ref_fasta = POLISHED_CONSENSUS.out.first({
+	it[0].name == params.consensus_ref_sample}) | 
+	FASTQ_TO_FASTA_MMI
+    cons_ref_paf_fasta = ADD_ASSEMBLY_CHAIN_FOR_LIFTOVER(ref, cons_ref_fasta)
+
+    ANNOTATE_CONSENSUS(ref, cons_ref_fasta)
+
+    MAP_READS_TO_CONS(cons_ref_fasta, fastq)
+    
+    other_fastq = fastq.filter({
+	it[0].name != params.consensus_ref_sample})
+    other_cons_fastq = POLISHED_CONSENSUS.out.filter({
+	it[0].name != params.consensus_ref_sample})
+
+    CALL_VS_CONS(cons_ref_paf_fasta, other_cons_fastq, other_fastq, medaka_variant_model_path, ref) // | view
+    
+    CALL_VS_CONS.out[0].map({it[1]}).collect() | MERGE_VCFS
+    CALL_VS_CONS.out[1].map({it[1]}).collect() | MERGE_VCFS_MM
+
     MERGE_COMMON_CALL_FILES_CONS(CALL_VS_CONS.out[2].map({it[1]}).collect(),
 				 channel.fromPath(params.regions_annotation),
 				 cons_ref_fasta.map({it.subList(0,3)}))
 
-    // Here we take the discordant vcf
-    CONVERT_VCF_TO_TABLE(MERGE_COMMON_CALL_FILES.out[1].map({it[0]}), "common_variants.tsv")
     // Here we take the common vcf, as tehy are vs reference sample already
     CONVERT_VCF_TO_TABLE_CONS(MERGE_COMMON_CALL_FILES_CONS.out[0].map({it[0]}), "variants_vs_"+params.consensus_ref_sample+".tsv")
+
+    //// End: Calling vs selected sample consensus //////////////////////////
     
-    // Finally, clair3, may be used in addition to medaka calls
-    CLAIR3_CALL(ref, MAP_READS_TO_REF.out, clair_model_path)
-
-    CLAIR3_CALL.out.map({it[1]}).collect() | MERGE_CLAIR3_VCFS
-
-    CLAIR3_CALL_SENSITIVE(ref, MAP_READS_TO_REF.out, clair_model_path)
-
-    CLAIR3_CALL_SENSITIVE.out.map({it[1]}).collect() | MERGE_CLAIR3_SENSITIVE_VCFS
-
-    // Marginally useful
-    SNIFFLES_CALL(ref, MAP_READS_TO_REF.out)
 }
 
 // Dump the workflow parameters and current directory git status
@@ -742,6 +789,5 @@ workflow.onComplete = {
     json_str = JsonOutput.toJson(params)
     json_indented = JsonOutput.prettyPrint(json_str)
     file << json_indented << "\n"
-    file.close()
-    
+    file.close()    
 }
