@@ -44,7 +44,7 @@ WORKDIR /
 RUN rm -rf Flye
 
 
-RUN pip3 install "medaka==1.11.2" && \
+RUN pip3 install "medaka==1.11.3" && \
     rm -rf /root/.cache
 
 ARG hts_ver=1.19
