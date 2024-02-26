@@ -246,7 +246,7 @@ process MAP_READS_TO_REF {
     script:
     """
 minimap2 -ax map-ont -t${task.cpus} ${params.minimap2_cs_tag} ${ref_fa_mmi} ${fastq} | \
-    samtools sort -o reads_vs_ref.bam -
+    samtools sort -@${task.cpus} -o reads_vs_ref.bam -
 samtools index reads_vs_ref.bam
     """
 }
@@ -315,7 +315,7 @@ process MAP_READS_TO_CONS {
     script:
     """
 minimap2 -ax map-ont -t${task.cpus} ${params.minimap2_cs_tag} ${ref_fa_mmi} ${fastq} | \
-    samtools sort -o reads_vs_ref.bam -
+    samtools sort -@${task.cpus} -o reads_vs_ref.bam -
 samtools index reads_vs_ref.bam
     """
 }
