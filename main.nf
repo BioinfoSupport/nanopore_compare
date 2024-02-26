@@ -191,6 +191,22 @@ minimap2 -I 16G -x map-ont -d ${mmi} ${ref}
     """
 }
 
+process FASTA_ADD_FAI {
+    storeDir "${file(params.ref_fa).getParent()}"
+    
+    input:
+    tuple val(meta), path(ref)
+
+    output:
+    tuple val(meta), path(ref), path(fai)
+    
+    script:
+    fai = ref+".fai"
+    """
+samtools faidx ${ref}
+    """
+}
+
 // Generate the polished consensus and return it
 workflow POLISHED_CONSENSUS {
     take:
@@ -736,7 +752,7 @@ workflow {
 
 
     //// Reference preparation /////////////////////////////////////////
-    ref = channel.value([[name: params.ref_id], file(params.ref_fa), file(params.ref_fa+".fai")])
+    ref = channel.value([[name: params.ref_id], file(params.ref_fa)]) | FASTA_ADD_FAI
     ref_mmi = ref | FASTA_ADD_MMI // | view { "Using reference ${it}"}
 
 
