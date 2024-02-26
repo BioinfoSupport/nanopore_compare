@@ -33,7 +33,11 @@ params.medaka_lowq = "20"
 
 params.prokka_args = "--usegenus --genus Staphylococcus --species aureus --strain 8325-4"
 
-params.minimap2_cs_tag = "--cs"
+// CS tag is probably useless. '-y' is required to copy modification MM and ML tags
+params.minimap2_cs_tag = "--cs -y"
+
+params.do_flye_meta = true
+
 
 import groovy.json.JsonOutput
 
@@ -43,6 +47,7 @@ include {
     GET_MEDAKA_MODEL as GET_MEDAKA_VARIANT_MODEL;
     GET_CLAIR3_MODEL;
     CRAM_TO_FASTQ_GZ
+    DIR_TO_FASTQ_GZ
 } from "./modules/utils.nf"
 
 include {
@@ -86,6 +91,29 @@ process FLYE_ASSEMBLE {
     script:
     """
 flye ${params.flye_flags} --threads ${task.cpus} \
+    --out-dir flye --nano-hq ${fastq}
+    """
+    stub:
+    """
+mkdir flye
+touch flye/assembly.fasta flye/assembly_info.txt flye/assembly_graph.gfa
+    """
+}
+
+process FLYE_ASSEMBLE_FULL {
+    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
+	saveAs: { it.replaceFirst(/flye\//, "flye_full/") }
+    
+    input:
+    tuple val(meta), path(fastq)
+
+    output:
+    tuple val(meta), path("flye/assembly.fasta")
+    tuple val(meta), path("flye/*")
+
+    script:
+    """
+flye --meta --keep-haplotypes --threads ${task.cpus} \
     --out-dir flye --nano-hq ${fastq}
     """
     stub:
@@ -171,6 +199,9 @@ workflow POLISHED_CONSENSUS {
     main:
 
     draft = FLYE_ASSEMBLE(fastq)
+    if (params.do_flye_meta) {
+        FLYE_ASSEMBLE_FULL(fastq)
+    }
     // Have to join matching on meta to have draft and fastq in sync
     polished = MEDAKA_POLISH(draft[0].join(fastq), medaka_model_path)
 
@@ -689,13 +720,16 @@ workflow {
     // Optionally convert CRAM/BAM to fastq    
     input_files
 	.branch( {
-		cram: it[1] ==~ /.*\.cram$/
-		fastq: true
+		cram: it[1] ==~ /.*\.(cram|bam)$/
+		fastq: it[1] ==~ /.*\.fastq\.gz$/
+		dir: file(it[1]).exists() && file(it[1]).isDirectory()
+		unknown: true
 	    } )
 	.set { fastq_split_by_type }
     fastq_split_by_type
 	.fastq
 	.concat(CRAM_TO_FASTQ_GZ(fastq_split_by_type.cram))
+	.concat(DIR_TO_FASTQ_GZ(fastq_split_by_type.dir))
         // .view { "Using sample ${it}" }
 	.set { fastq }
 

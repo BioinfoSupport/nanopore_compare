@@ -79,3 +79,16 @@ process CRAM_TO_FASTQ_GZ {
 samtools fastq -T'*' ${cram} | bgzip -@${task.cpus} > ${meta.name}.fastq.gz
     """
 }
+
+process DIR_TO_FASTQ_GZ {
+    input:
+    tuple val(meta), path(dir)
+
+    output:
+    tuple val(meta), file("*.fastq.gz")
+
+    script:
+    """
+zcat ${dir}/*.fastq.gz | bgzip -@${task.cpus} > ${meta.name}.fastq.gz
+    """
+}
