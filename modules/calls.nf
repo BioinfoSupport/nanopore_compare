@@ -251,7 +251,7 @@ process MERGE_MEDAKA_AND_CONS_CALLS {
     tuple val(meta), path(medaka_vcf), path(medaka_csi), path(cons_vcf), path(cons_csi)
     
     output:
-    tuple val(meta), path("common_vs_ref.vcf.gz"), path("common_vs_ref.vcf.gz.csi")
+    tuple val(meta), path("joined_vs_ref.vcf.gz"), path("joined_vs_ref.vcf.gz.csi")
     
     script:
     // TODO Move thresholds to parameters?
@@ -269,15 +269,15 @@ bcftools concat -a -D medaka_not_in_sv.vcf.gz ${cons_vcf} | \
     bcftools filter -e 'QNAME="." & QUAL<${params.medaka_lowq}' -s MEDAKA_LQ | \
     bcftools filter -e 'QNAME="." & DP<=3' -s MEDAKA_LDP | \
     bcftools filter -e 'QNAME!="." & abs(strlen(ALT)-strlen(REF))<50' -s CONS_Short \
-        -o common_vs_ref.vcf.gz
-bcftools index common_vs_ref.vcf.gz
+        -o joined_vs_ref.vcf.gz
+bcftools index joined_vs_ref.vcf.gz
     """
 }
 
 
 
 // Region annotation bz regions bed should be made at table level -- not quite good for VCF
-process MERGE_COMMON_CALL_FILES {
+process MERGE_JOINED_CALL_FILES {
     publishDir mode: 'link', path: "${file(params.data_dir)}",
 	saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
 
@@ -287,8 +287,8 @@ process MERGE_COMMON_CALL_FILES {
     tuple val(ref_meta), path(ref_fasta), path(ref_fai)
 
     output:
-    tuple path('common_vs_ref.merged.vcf.gz'), path('common_vs_ref.merged.vcf.gz.csi')
-    tuple path('common_vs_ref.merged.discordant.vcf.gz'), path('common_vs_ref.merged.discordant.vcf.gz.csi'), optional: true
+    tuple path('joined_vs_ref.merged.vcf.gz'), path('joined_vs_ref.merged.vcf.gz.csi')
+    tuple path('joined_vs_ref.merged.discordant.vcf.gz'), path('joined_vs_ref.merged.discordant.vcf.gz.csi'), optional: true
 
     script:
     """
@@ -296,8 +296,8 @@ for f in vcf*.vcf.gz; do
     bcftools index \$f
 done
 if [ -f vcf.vcf.gz ]; then # Single file given, no merge needed
-    cp vcf.vcf.gz common_vs_ref.merged0.vcf.gz
-    mv vcf.vcf.gz.csi common_vs_ref.merged0.vcf.gz.csi
+    cp vcf.vcf.gz joined_vs_ref.merged0.vcf.gz
+    mv vcf.vcf.gz.csi joined_vs_ref.merged0.vcf.gz.csi
 else
     cat > samples_in_config.txt <<EOF
 ${params.concordance_samples.join("\n")}
@@ -307,8 +307,8 @@ EOF
 
     # for f in vcf*.vcf.gz; do bcftools query -l \$f; done | sort > samples.txt
     bcftools merge -F x vcf*.vcf.gz | bcftools view -S samples.txt - | \
-        bcftools view -e 'AN=0' - -o common_vs_ref.merged0.vcf.gz
-    bcftools index common_vs_ref.merged0.vcf.gz
+        bcftools view -e 'AN=0' - -o joined_vs_ref.merged0.vcf.gz
+    bcftools index joined_vs_ref.merged0.vcf.gz
 fi
 
 ## Annotate the merged file
@@ -316,22 +316,22 @@ cat >annot.hdr <<EOF
 ##INFO=<ID=GENE,Number=1,Type=String,Description="Gene name">
 ##INFO=<ID=NOTE,Number=1,Type=String,Description="Region manual note">
 EOF
-bcftools annotate -h annot.hdr -c CHROM,FROM,TO,GENE -a ${file(params.gene_annotation_bed)} -o common_vs_ref.merged1.vcf.gz common_vs_ref.merged0.vcf.gz
-bcftools index common_vs_ref.merged1.vcf.gz
+bcftools annotate -h annot.hdr -c CHROM,FROM,TO,GENE -a ${file(params.gene_annotation_bed)} -o joined_vs_ref.merged1.vcf.gz joined_vs_ref.merged0.vcf.gz
+bcftools index joined_vs_ref.merged1.vcf.gz
 
 if [ -f ${regions_annotation} ]; then
     ## Fix potential bad regions from igv
     awk -F"\t" 'BEGIN{OFS="\t"}; NF<4{\$4="EmptyNote"}; {gsub(/ /,"_",\$4);print}' ${regions_annotation} > fixed.regions.bed
-    bcftools annotate -a fixed.regions.bed -c CHROM,FROM,TO,NOTE -h annot.hdr common_vs_ref.merged1.vcf.gz -o common_vs_ref.merged.vcf.gz
-    bcftools index  common_vs_ref.merged.vcf.gz
+    bcftools annotate -a fixed.regions.bed -c CHROM,FROM,TO,NOTE -h annot.hdr joined_vs_ref.merged1.vcf.gz -o joined_vs_ref.merged.vcf.gz
+    bcftools index  joined_vs_ref.merged.vcf.gz
 else
-    mv common_vs_ref.merged1.vcf.gz common_vs_ref.merged.vcf.gz
-    mv common_vs_ref.merged1.vcf.gz.csi common_vs_ref.merged.vcf.gz.csi
+    mv joined_vs_ref.merged1.vcf.gz joined_vs_ref.merged.vcf.gz
+    mv joined_vs_ref.merged1.vcf.gz.csi joined_vs_ref.merged.vcf.gz.csi
 fi
 
 ## Filtering concordant variants
-bcftools filter -m+ -s CONCORDANT -e 'AN=N_SAMPLES && N_ALT=1' common_vs_ref.merged.vcf.gz -o common_vs_ref.merged.discordant.vcf.gz
-bcftools index common_vs_ref.merged.discordant.vcf.gz
+bcftools filter -m+ -s CONCORDANT -e 'AN=N_SAMPLES && N_ALT=1' joined_vs_ref.merged.vcf.gz -o joined_vs_ref.merged.discordant.vcf.gz
+bcftools index joined_vs_ref.merged.discordant.vcf.gz
 """
 }
 

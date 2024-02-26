@@ -64,9 +64,10 @@ include {
     MM2_CALL_ANNOTATE as MM2_CALL_ANNOTATE_CONS;
     MERGE_MEDAKA_AND_CONS_CALLS;
     MERGE_MEDAKA_AND_CONS_CALLS as MERGE_MEDAKA_AND_CONS_CALLS_CONS_NOLIFT
-    MERGE_MEDAKA_AND_CONS_CALLS as MERGE_MEDAKA_AND_CONS_CALLS_CONS
-    MERGE_COMMON_CALL_FILES;
-    MERGE_COMMON_CALL_FILES as MERGE_COMMON_CALL_FILES_CONS;
+    MERGE_MEDAKA_AND_CONS_CALLS as MERGE_MEDAKA_AND_CONS_CALLS_CONS_LIFTED
+    MERGE_JOINED_CALL_FILES;
+    MERGE_JOINED_CALL_FILES as MERGE_JOINED_CALL_FILES_CONS;
+    MERGE_JOINED_CALL_FILES as MERGE_JOINED_CALL_FILES_CONS_LIFTED;
     CONVERT_VCF_TO_TABLE;
     CONVERT_VCF_TO_TABLE as CONVERT_VCF_TO_TABLE_CONS} from  './modules/calls.nf'
 
@@ -421,7 +422,7 @@ workflow CALL_VS_CONS {
     lift_vcfs = LIFTOVER_MEDAKA_CALLS(consensus_reference_paf_and_fasta, ref, vcfs[0]) // | map( {it.subList(0,3)} )
     lift_vcfs_mm2 = LIFTOVER_MM2_CALLS(consensus_reference_paf_and_fasta, ref, vcfs_mm2_annotated[0]) // | map( {it.subList(0,3)} )
 
-    joined_vcfs = MERGE_MEDAKA_AND_CONS_CALLS_CONS(reference_fasta,
+    joined_vcfs = MERGE_MEDAKA_AND_CONS_CALLS_CONS_LIFTED(reference_fasta,
 						   lift_vcfs.map( {it.subList(0,3)} )
 						   .join(lift_vcfs_mm2.map( {it.subList(0,3)} )))
 
@@ -757,11 +758,11 @@ workflow {
     CALL_VS_REF.out[0].map({it[1]}).collect() | MERGE_READS_VS_REF_VCFS
     CALL_VS_REF.out[1].map({it[1]}).collect() | MERGE_READS_VS_REF_VCFS_MM
 
-    MERGE_COMMON_CALL_FILES(CALL_VS_REF.out[2].map({it[1]}).collect(),
+    MERGE_JOINED_CALL_FILES(CALL_VS_REF.out[2].map({it[1]}).collect(),
 			    channel.fromPath(params.regions_annotation),
 			    ref)
     // Here we take the discordant vcf
-    CONVERT_VCF_TO_TABLE(MERGE_COMMON_CALL_FILES.out[1].map({it[0]}), "common_variants.tsv")
+    CONVERT_VCF_TO_TABLE(MERGE_JOINED_CALL_FILES.out[1].map({it[0]}), "common_variants.tsv")
 
     //// CLAIR3 consensus calling /////////////////////////////////////
     CLAIR3_CALL(ref, MAP_READS_TO_REF.out, clair_model_path)
@@ -796,12 +797,15 @@ workflow {
     CALL_VS_CONS.out[0].map({it[1]}).collect() | MERGE_VCFS
     CALL_VS_CONS.out[1].map({it[1]}).collect() | MERGE_VCFS_MM
 
-    MERGE_COMMON_CALL_FILES_CONS(CALL_VS_CONS.out[2].map({it[1]}).collect(),
+    MERGE_JOINED_CALL_FILES_CONS_LIFTED(CALL_VS_CONS.out[2].map({it[1]}).collect(),
+				 channel.fromPath(params.regions_annotation),
+				 cons_ref_fasta.map({it.subList(0,3)}))
+    MERGE_JOINED_CALL_FILES_CONS(CALL_VS_CONS.out[3].map({it[1]}).collect(),
 				 channel.fromPath(params.regions_annotation),
 				 cons_ref_fasta.map({it.subList(0,3)}))
 
     // Here we take the common vcf, as tehy are vs reference sample already
-    CONVERT_VCF_TO_TABLE_CONS(MERGE_COMMON_CALL_FILES_CONS.out[0].map({it[0]}), "variants_vs_"+params.consensus_ref_sample+".tsv")
+    CONVERT_VCF_TO_TABLE_CONS(MERGE_JOINED_CALL_FILES_CONS.out[0].map({it[0]}), "variants_vs_"+params.consensus_ref_sample+".tsv")
 
     //// End: Calling vs selected sample consensus //////////////////////////
     
