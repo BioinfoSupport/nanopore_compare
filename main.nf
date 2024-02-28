@@ -38,6 +38,7 @@ params.minimap2_cs_tag = "--cs -y"
 
 params.do_flye_meta = true
 
+params.publish_mode = "symlink"
 
 import groovy.json.JsonOutput
 
@@ -78,7 +79,7 @@ include {
 
 // Assembles draft consensus assembly
 process FLYE_ASSEMBLE {
-    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
 	pattern: "flye/{assembly_info.txt,assembly_graph.gfa}",
 	saveAs: { it.replaceFirst(/\//, ".") }
     
@@ -102,7 +103,7 @@ touch flye/assembly.fasta flye/assembly_info.txt flye/assembly_graph.gfa
 }
 
 process FLYE_ASSEMBLE_FULL {
-    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
 	saveAs: { it.replaceFirst(/flye\//, "flye_full/") }
     
     input:
@@ -127,7 +128,7 @@ touch flye/assembly.fasta flye/assembly_info.txt flye/assembly_graph.gfa
 
 // Polish the draft consensus assembly, and save it as fastq, so qualities are avilable
 process MEDAKA_POLISH {
-    // publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
+    // publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
     // 	pattern: "medaka/consensus.fastq",
     // 	saveAs: { "consensus.fastq" }
     
@@ -233,7 +234,7 @@ workflow POLISHED_CONSENSUS {
 
 // Just direct mapping of the reads to the reference, for IGV manual control
 process MAP_READS_TO_REF {
-    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
 	saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
 
     input:
@@ -277,7 +278,7 @@ workflow CALL_VS_REF {
     //       Annotate by conensus base quality
     // TODO: Merge properly
 
-    joined_vcfs = MERGE_MEDAKA_AND_CONS_CALLS(reference_fasta_nommi, vcfs.join(vcfs_mm2_annotated))
+    joined_vcfs = MERGE_MEDAKA_AND_CONS_CALLS(reference_fasta_nommi, vcfs.join(vcfs_mm2_annotated), "")
     
     // Bad emit?
     emit:
@@ -302,7 +303,7 @@ workflow CALL_VS_REF {
 // Just direct mapping of the reads to the consensus, for IGV manual control
 // Full copy of MAP_TO_REF
 process MAP_READS_TO_CONS {
-    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
 	saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
 
     input:
@@ -321,7 +322,7 @@ samtools index reads_vs_ref.bam
 }
 
 process ADD_ASSEMBLY_PAF_FOR_LIFTOVER {
-    publishDir mode: 'link', path: "${file(params.data_dir)/cons_meta.name}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/cons_meta.name}",
 	pattern: "*.paf",
 	saveAs: { it.replaceFirst(/ref/,ref_meta.name) }
 
@@ -361,7 +362,7 @@ paf2chain --input ref_vs_consensus.mm2.paf > ref_vs_consensus.chain
 
 // Problem: --no-comp-alleles produces bad result in case of "restoring" SNP. What is teh way arond this?
 process LIFTOVER_MEDAKA_CALLS {
-    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
 	saveAs: { it.replaceFirst(/ref/, paf_meta.name) }
     
     input:
@@ -381,7 +382,7 @@ bcftools index medaka.reads_vs_ref.lifted.vcf.gz
 }
 
 process LIFTOVER_MM2_CALLS {
-    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
 	saveAs: { it.replaceFirst(/ref/, paf_meta.name) }
 
     input:
@@ -433,14 +434,14 @@ workflow CALL_VS_CONS {
 
     // Before liftover
     joined_vcfs_nolift = MERGE_MEDAKA_AND_CONS_CALLS_CONS_NOLIFT(reference_fasta,
-								 vcfs[0].join(vcfs_mm2_annotated[0]) )
+								 vcfs[0].join(vcfs_mm2_annotated[0]), "")
     // Lifted files
     lift_vcfs = LIFTOVER_MEDAKA_CALLS(consensus_reference_paf_and_fasta, ref, vcfs[0]) // | map( {it.subList(0,3)} )
     lift_vcfs_mm2 = LIFTOVER_MM2_CALLS(consensus_reference_paf_and_fasta, ref, vcfs_mm2_annotated[0]) // | map( {it.subList(0,3)} )
 
     joined_vcfs = MERGE_MEDAKA_AND_CONS_CALLS_CONS_LIFTED(reference_fasta,
 						   lift_vcfs.map( {it.subList(0,3)} )
-						   .join(lift_vcfs_mm2.map( {it.subList(0,3)} )))
+						   .join(lift_vcfs_mm2.map( {it.subList(0,3)} )), ".lifted")
 
     emit:
     lift_vcfs[0]
@@ -455,7 +456,7 @@ workflow CALL_VS_CONS {
 
 
 process PROKKA_ANNOTATE {
-    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}"
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}"
     
     input:
     tuple val(meta), path(fasta), path(fai), path(mmi)
@@ -471,7 +472,7 @@ prokka --outdir prokka_annotation --prefix ${meta.name} --cpus ${task.cpus} ${pa
 
 
 process ADD_GENOME_JSON {
-    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}"
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}"
     cpus = 1
 
     input:
@@ -508,7 +509,7 @@ EOF
 }
 
 process LIFTOVER_REF_ANNOTATIONS {
-    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}"
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}"
     cpus = 1
     
     input:
@@ -550,7 +551,7 @@ workflow ANNOTATE_CONSENSUS {
 ////////////////////// Final VCF merging processes
 
 process MERGE_VCFS {
-    publishDir mode: 'link', path: "${file(params.data_dir)}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
 	saveAs: {
 	it.replaceFirst(/merged_vcf/,
 			'medaka.reads_vs_'+params.consensus_ref_sample+'.lifted.merged') }
@@ -579,7 +580,7 @@ fi
 }
 
 process MERGE_READS_VS_REF_VCFS {
-    publishDir mode: 'link', path: "${file(params.data_dir)}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
 	saveAs: { it.replaceFirst(/merged_reads_vs_ref_vcf/,
 				  'medaka.reads_vs_'+params.ref_id+'.merged') }
 
@@ -607,7 +608,7 @@ fi
 }
 
 process MERGE_READS_VS_REF_VCFS_MM {
-    publishDir mode: 'link', path: "${file(params.data_dir)}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
 	saveAs: { it.replaceFirst(/merged_mm_vs_ref_vcf/,
 				  'mm2.cons_vs_'+params.ref_id+'.merged') }
 
@@ -635,7 +636,7 @@ fi
 }
 
 process MERGE_VCFS_MM {
-    publishDir mode: 'link', path: "${file(params.data_dir)}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
 	saveAs: {
 	it.replaceFirst(/merged_mm_vcf/,
 			'mm2.cons_vs_'+params.consensus_ref_sample+'.lifted.merged') }
@@ -664,7 +665,7 @@ fi
 }
 
 process MERGE_CLAIR3_VCFS {
-    publishDir mode: 'link', path: "${file(params.data_dir)}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
 	saveAs: {it.replaceFirst(/ref/, params.ref_id)}
 
     input:
@@ -691,7 +692,7 @@ fi
 }
 
 process MERGE_CLAIR3_SENSITIVE_VCFS {
-    publishDir mode: 'link', path: "${file(params.data_dir)}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
 	saveAs: {it.replaceFirst(/ref/, params.ref_id).replaceFirst(/claire/, "claire_sensitive_")}
 
     input:
@@ -776,7 +777,7 @@ workflow {
 
     MERGE_JOINED_CALL_FILES(CALL_VS_REF.out[2].map({it[1]}).collect(),
 			    channel.fromPath(params.regions_annotation),
-			    ref)
+			    ref, "")
     // Here we take the discordant vcf
     CONVERT_VCF_TO_TABLE(MERGE_JOINED_CALL_FILES.out[1].map({it[0]}), "common_variants.tsv")
 
@@ -815,10 +816,10 @@ workflow {
 
     MERGE_JOINED_CALL_FILES_CONS_LIFTED(CALL_VS_CONS.out[2].map({it[1]}).collect(),
 				 channel.fromPath(params.regions_annotation),
-				 cons_ref_fasta.map({it.subList(0,3)}))
+				 cons_ref_fasta.map({it.subList(0,3)}), ".lifted")
     MERGE_JOINED_CALL_FILES_CONS(CALL_VS_CONS.out[3].map({it[1]}).collect(),
 				 channel.fromPath(params.regions_annotation),
-				 cons_ref_fasta.map({it.subList(0,3)}))
+				 cons_ref_fasta.map({it.subList(0,3)}), "")
 
     // Here we take the common vcf, as tehy are vs reference sample already
     CONVERT_VCF_TO_TABLE_CONS(MERGE_JOINED_CALL_FILES_CONS.out[0].map({it[0]}), "variants_vs_"+params.consensus_ref_sample+".tsv")

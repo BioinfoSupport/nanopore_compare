@@ -2,7 +2,7 @@
 
 // Calling by medaka from reads vs sequence
 process MEDAKA_CALL {
-    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
 	saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
     cpus 2
 
@@ -37,7 +37,7 @@ touch medaka.reads_vs_ref.vcf.gz.csi
 
 // Call using minmap2/paftools form two assemblies
 process MM2_CALL {
-    // publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
+    // publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
     // 	saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
 
     input:
@@ -74,7 +74,7 @@ touch mm2.cons_cs_ref.vcf.gz.csi
 process MM2_CALL_ANNOTATE {
     label 'Rscript'
     
-    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
 	saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
 
     input:
@@ -114,7 +114,7 @@ minimap2 -cx asm5 --cs -z1000000 ref.fasta ${fastq} | \
 
 // Calling by medaka from reads vs sequence
 process CLAIR3_CALL {
-    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
 	saveAs: { it.replaceFirst(/claire\/merge_output/, "claire_vs_"+ref_meta.name) }
 
     input:
@@ -143,7 +143,7 @@ process CLAIR3_CALL {
 
 // Calling by medaka from reads vs sequence
 process CLAIR3_CALL_SENSITIVE {
-    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
 	saveAs: { it.replaceFirst(/claire\/merge_output/, "claire_sensitive_vs_"+ref_meta.name) }
 
     input:
@@ -172,7 +172,7 @@ process CLAIR3_CALL_SENSITIVE {
 
 // Calling SV by sniffles
 process SNIFFLES_CALL {
-    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}"
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}"
 
     input:
     tuple val(ref_meta), path(ref_fa), path(ref_fa_fai)
@@ -215,7 +215,7 @@ bcftools index region_annotated.vcf.gz
 // Align the final consensus to the reference.
 // Can be further used for IGV display or various remaping operations
 process REMAP_CONSENSUS_TO_REFERENCE {
-    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
 	saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
 
     input:
@@ -243,12 +243,13 @@ touch consensus_vs_ref.bam consensus_vs_ref.bam.bai
 // Short consensus calls are filtered out
 // TODO: Filter out MEDAKA calls within large consensus deletions
 process MERGE_MEDAKA_AND_CONS_CALLS {
-    publishDir mode: 'link', path: "${file(params.data_dir)/meta.name}",
-	saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
+	saveAs: { it.replaceFirst(/ref/, ref_meta.name+suffix) }
 
     input:
     tuple val(ref_meta), path(ref_fasta), path(ref_fai)
     tuple val(meta), path(medaka_vcf), path(medaka_csi), path(cons_vcf), path(cons_csi)
+    val(suffix)
     
     output:
     tuple val(meta), path("joined_vs_ref.vcf.gz"), path("joined_vs_ref.vcf.gz.csi")
@@ -278,13 +279,14 @@ bcftools index joined_vs_ref.vcf.gz
 
 // Region annotation bz regions bed should be made at table level -- not quite good for VCF
 process MERGE_JOINED_CALL_FILES {
-    publishDir mode: 'link', path: "${file(params.data_dir)}",
-	saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
+	saveAs: { it.replaceFirst(/ref/, ref_meta.name+suffix) }
 
     input:
     path 'vcf*.vcf.gz'
     path regions_annotation
     tuple val(ref_meta), path(ref_fasta), path(ref_fai)
+    val(suffix) // Indicate lifted for publishing
 
     output:
     tuple path('joined_vs_ref.merged.vcf.gz'), path('joined_vs_ref.merged.vcf.gz.csi')
@@ -337,7 +339,7 @@ bcftools index joined_vs_ref.merged.discordant.vcf.gz
 
 
 process CONVERT_VCF_TO_TABLE {
-    publishDir mode: 'link', path: "${file(params.data_dir)}", saveAs: { saveas }
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}", saveAs: { saveas }
 
     input:
     path(vcf)

@@ -3,6 +3,7 @@
 // Downloads the model or gets the one already present in the container
 process GET_MEDAKA_MODEL {
     storeDir "${params.store_dir}/medaka/${medaka_model}"
+    cpus = 1
     
     input:
     val(medaka_model)
@@ -25,6 +26,7 @@ fi
 // Get medaka model into the store_dir/medaka based on the model name
 process GET_CLAIR3_MODEL {
     storeDir "${params.store_dir}/clair"
+    cpus = 1
     
     input:
     val(model)
