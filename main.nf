@@ -17,7 +17,7 @@ params.claire3_model = "r1041_e82_400bps_sup_g615"
 // params.sample_fastqs = ["data/nanopore/barcode01.guppy.pass.fastq.gz","data/nanopore/barcode02.guppy.pass.fastq.gz"]
 // params.exclude_samples = ["barcode09","barcode10","barcode11"]
 // params.concordance_samples = ["barcode01","barcode02"]
-// params.consensus_ref_sample = "barcode01"
+params.consensus_ref_sample = ""
 
 params.ref_fa = "data/saureus/Saureus8325.fasta"
 params.ref_id = "SA8325"
@@ -793,38 +793,40 @@ workflow {
 
     //// End: Calling vs Reference //////////////////////////////////////////
 
+    if (params.consensus_ref_sample != "") {
     
-    //// Calling vs selected sample consensus //////////////////////////
-    cons_ref_fasta = POLISHED_CONSENSUS.out.first({
-	it[0].name == params.consensus_ref_sample}) | 
-	FASTQ_TO_FASTA_MMI
-    cons_ref_paf_fasta = ADD_ASSEMBLY_CHAIN_FOR_LIFTOVER(ref, cons_ref_fasta)
+	//// Calling vs selected sample consensus //////////////////////////
+	cons_ref_fasta = POLISHED_CONSENSUS.out.first({
+	    it[0].name == params.consensus_ref_sample}) | 
+	    FASTQ_TO_FASTA_MMI
+	cons_ref_paf_fasta = ADD_ASSEMBLY_CHAIN_FOR_LIFTOVER(ref, cons_ref_fasta)
 
-    ANNOTATE_CONSENSUS(ref, cons_ref_fasta)
+	ANNOTATE_CONSENSUS(ref, cons_ref_fasta)
 
-    MAP_READS_TO_CONS(cons_ref_fasta, fastq)
+	MAP_READS_TO_CONS(cons_ref_fasta, fastq)
     
-    other_fastq = fastq.filter({
-	it[0].name != params.consensus_ref_sample})
-    other_cons_fastq = POLISHED_CONSENSUS.out.filter({
-	it[0].name != params.consensus_ref_sample})
+	other_fastq = fastq.filter({
+	    it[0].name != params.consensus_ref_sample})
+	other_cons_fastq = POLISHED_CONSENSUS.out.filter({
+	    it[0].name != params.consensus_ref_sample})
 
-    CALL_VS_CONS(cons_ref_paf_fasta, other_cons_fastq, other_fastq, medaka_variant_model_path, ref) // | view
+	CALL_VS_CONS(cons_ref_paf_fasta, other_cons_fastq, other_fastq, medaka_variant_model_path, ref) // | view
     
-    CALL_VS_CONS.out[0].map({it[1]}).collect() | MERGE_VCFS
-    CALL_VS_CONS.out[1].map({it[1]}).collect() | MERGE_VCFS_MM
+	CALL_VS_CONS.out[0].map({it[1]}).collect() | MERGE_VCFS
+	CALL_VS_CONS.out[1].map({it[1]}).collect() | MERGE_VCFS_MM
 
-    MERGE_JOINED_CALL_FILES_CONS_LIFTED(CALL_VS_CONS.out[2].map({it[1]}).collect(),
-				 channel.fromPath(params.regions_annotation),
-				 cons_ref_fasta.map({it.subList(0,3)}), ".lifted")
-    MERGE_JOINED_CALL_FILES_CONS(CALL_VS_CONS.out[3].map({it[1]}).collect(),
-				 channel.fromPath(params.regions_annotation),
-				 cons_ref_fasta.map({it.subList(0,3)}), "")
+	MERGE_JOINED_CALL_FILES_CONS_LIFTED(CALL_VS_CONS.out[2].map({it[1]}).collect(),
+					    channel.fromPath(params.regions_annotation),
+					    cons_ref_fasta.map({it.subList(0,3)}), ".lifted")
+	MERGE_JOINED_CALL_FILES_CONS(CALL_VS_CONS.out[3].map({it[1]}).collect(),
+				     channel.fromPath(params.regions_annotation),
+				     cons_ref_fasta.map({it.subList(0,3)}), "")
 
-    // Here we take the common vcf, as tehy are vs reference sample already
-    CONVERT_VCF_TO_TABLE_CONS(MERGE_JOINED_CALL_FILES_CONS.out[0].map({it[0]}), "variants_vs_"+params.consensus_ref_sample+".tsv")
+	// Here we take the common vcf, as tehy are vs reference sample already
+	CONVERT_VCF_TO_TABLE_CONS(MERGE_JOINED_CALL_FILES_CONS.out[0].map({it[0]}), "variants_vs_"+params.consensus_ref_sample+".tsv")
 
-    //// End: Calling vs selected sample consensus //////////////////////////
+	//// End: Calling vs selected sample consensus //////////////////////////
+    }
     
 }
 
