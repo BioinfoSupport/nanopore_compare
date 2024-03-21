@@ -72,6 +72,12 @@ include {
     CONVERT_VCF_TO_TABLE;
     CONVERT_VCF_TO_TABLE as CONVERT_VCF_TO_TABLE_CONS} from  './modules/calls.nf'
 
+include {
+    MAP_READS as MAP_READS_TO_REF
+    MAP_READS as MAP_READS_TO_CONS
+    BAMSTATS_MAPPED_READS as BAMSTATS_MAPPED_READS_TO_REF
+} from './modules/mapping.nf'
+
 
 ////////////////////////////////////////////////////////////////////////
 // Consensus generation
@@ -232,26 +238,6 @@ workflow POLISHED_CONSENSUS {
 
 
 
-// Just direct mapping of the reads to the reference, for IGV manual control
-process MAP_READS_TO_REF {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
-	saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
-
-    input:
-    tuple val(ref_meta), path(ref_fa), path(ref_fa_fai), path(ref_fa_mmi)
-    tuple val(meta), path(fastq)
-
-    output:
-    tuple val(meta), path("reads_vs_ref.bam"), path("reads_vs_ref.bam.bai")
-
-    script:
-    """
-minimap2 -ax map-ont -t${task.cpus} ${params.minimap2_cs_tag} ${ref_fa_mmi} ${fastq} | \
-    samtools sort -@${task.cpus} -o reads_vs_ref.bam -
-samtools index reads_vs_ref.bam
-    """
-}
-
 
 workflow CALL_VS_REF {
     take:
@@ -299,27 +285,6 @@ workflow CALL_VS_REF {
 ////////////////////////////////////////////////////////////////////////
 // Calling versus the consensus of one of the samples
 ////////////////////////////////////////////////////////////////////////
-
-// Just direct mapping of the reads to the consensus, for IGV manual control
-// Full copy of MAP_TO_REF
-process MAP_READS_TO_CONS {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
-	saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
-
-    input:
-    tuple val(ref_meta), path(ref_fa), path(ref_fa_fai), path(ref_fa_mmi)
-    tuple val(meta), path(fastq)
-
-    output:
-    tuple val(meta), path("reads_vs_ref.bam"), path("reads_vs_ref.bam.bai")
-
-    script:
-    """
-minimap2 -ax map-ont -t${task.cpus} ${params.minimap2_cs_tag} ${ref_fa_mmi} ${fastq} | \
-    samtools sort -@${task.cpus} -o reads_vs_ref.bam -
-samtools index reads_vs_ref.bam
-    """
-}
 
 process ADD_ASSEMBLY_PAF_FOR_LIFTOVER {
     publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/cons_meta.name}",
@@ -768,7 +733,7 @@ workflow {
     // POLISHED_CONSENSUS.out.cons_bam | view
 
     //// Calling vs Reference //////////////////////////////////////////
-    MAP_READS_TO_REF(ref_mmi, fastq)
+    MAP_READS_TO_REF(ref_mmi, fastq) | BAMSTATS_MAPPED_READS_TO_REF
 
     CALL_VS_REF(ref_mmi, POLISHED_CONSENSUS.out, fastq, medaka_variant_model_path) // | view
 
