@@ -76,6 +76,7 @@ include {
     MAP_READS as MAP_READS_TO_REF
     MAP_READS as MAP_READS_TO_CONS
     BAMSTATS_MAPPED_READS as BAMSTATS_MAPPED_READS_TO_REF
+    FLAGSTAT_MAPPED_READS
 } from './modules/mapping.nf'
 
 
@@ -733,7 +734,11 @@ workflow {
     // POLISHED_CONSENSUS.out.cons_bam | view
 
     //// Calling vs Reference //////////////////////////////////////////
-    MAP_READS_TO_REF(ref_mmi, fastq) | BAMSTATS_MAPPED_READS_TO_REF
+    MAP_READS_TO_REF(ref_mmi, fastq)
+
+    // QC statistics
+    MAP_READS_TO_REF.out | BAMSTATS_MAPPED_READS_TO_REF
+    MAP_READS_TO_REF.out | FLAGSTAT_MAPPED_READS
 
     CALL_VS_REF(ref_mmi, POLISHED_CONSENSUS.out, fastq, medaka_variant_model_path) // | view
 

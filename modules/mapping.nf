@@ -36,3 +36,19 @@ process BAMSTATS_MAPPED_READS {
 samtools stats ${bam} > ${bamstats}
     """
 }
+
+process FLAGSTAT_MAPPED_READS {
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}"
+
+    input:
+    tuple val(meta), path(bam), path(bam_bai)
+
+    output:
+    tuple val(meta), path(flagstat)
+
+    script:
+    flagstat = bam + ".flagstat"
+    """
+samtools flagstat ${bam} > ${flagstat}
+    """
+}
