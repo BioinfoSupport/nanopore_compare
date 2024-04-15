@@ -1,6 +1,10 @@
 // -*- groovy -*-
 
-// TODO: Separate process for .map-ont.mmi generation
+// Required parameter
+params.sample_files = []
+// Old style, it is prefered to use sample_files
+params.sample_fastqs = []
+// params.sample_files = ["data/nanopore/barcode01.guppy.pass.fastq.gz","data/nanopore/barcode02.guppy.pass.fastq.gz"]
 
 // genome size is not really needed
 // no-lat-contigs to prevent extra contigs?
@@ -11,12 +15,7 @@ params.medaka_variant_model = "r1041_e82_400bps_sup_variant_g615"
 // FASTQ dorada model `dna_r10.4.1_e8.2_sup@v3.5.1`
 // corresponds to `r1041_e82_400bps_sup_g615 model`
 
-params.claire3_platform = "ont"
-params.claire3_model = "r1041_e82_400bps_sup_g615"
-
-// params.sample_fastqs = ["data/nanopore/barcode01.guppy.pass.fastq.gz","data/nanopore/barcode02.guppy.pass.fastq.gz"]
-// params.exclude_samples = ["barcode09","barcode10","barcode11"]
-// params.concordance_samples = ["barcode01","barcode02"]
+params.exclude_samples = []
 params.consensus_ref_sample = ""
 
 params.ref_fa = "data/saureus/Saureus8325.fasta"
@@ -25,9 +24,10 @@ params.ref_gff = "data/saureus/Saureus8325.gff"
 params.gene_annotation_bed = "data/saureus/Saureus8325_gene_annotations.bed"
 
 params.store_dir = "store_dir"
-// params.data_dir = "data_nf/old_nanopore_test"
+params.data_dir = "data"
 
-params.regions_annotation = "regions.bed"
+
+params.regions_annotation = "${workflow.projectDir}/assets/NO_FILE"
 // Some marginal calls appear
 params.medaka_lowq = "20"
 
@@ -36,9 +36,21 @@ params.prokka_args = "--usegenus --genus Staphylococcus --species aureus --strai
 // CS tag is probably useless. '-y' is required to copy modification MM and ML tags
 params.minimap2_cs_tag = "--cs -y"
 
-params.do_flye_meta = true
+params.do_flye_meta = false
 
 params.publish_mode = "symlink"
+
+params.help = false
+
+
+// Optional additional callers
+params.clair3 = false
+params.clair3_platform = "ont"
+params.clair3_model = "r1041_e82_400bps_sup_g615"
+
+params.sniffles = false
+
+
 
 import groovy.json.JsonOutput
 
@@ -507,7 +519,7 @@ workflow ANNOTATE_CONSENSUS {
 
     main:
 
-    LIFTOVER_REF_ANNOTATIONS(ref, cons, channel.fromPath(params.ref_gff))
+    LIFTOVER_REF_ANNOTATIONS(ref, cons, file(params.ref_gff, checkIfExists:true))
     PROKKA_ANNOTATE(cons) | ADD_GENOME_JSON
     
 //    emit:
@@ -638,7 +650,7 @@ process MERGE_CLAIR3_VCFS {
     path 'vcf*.vcf.gz'
 
     output:
-    tuple path('claire_vs_ref.merged.vcf.gz'), path('claire_vs_ref.merged.vcf.gz.csi')
+    tuple path('clair_vs_ref.merged.vcf.gz'), path('clair_vs_ref.merged.vcf.gz.csi')
 
     script:
     """
@@ -646,26 +658,26 @@ for f in vcf*.vcf.gz; do
     bcftools index \$f
 done
 if [ -f vcf.vcf.gz ]; then # Single file given, no merge needed
-    cp vcf.vcf.gz claire_vs_ref.merged.vcf.gz
-    mv vcf.vcf.gz.csi claire_vs_ref.merged.vcf.gz.csi
+    cp vcf.vcf.gz clair_vs_ref.merged.vcf.gz
+    mv vcf.vcf.gz.csi clair_vs_ref.merged.vcf.gz.csi
 else
     bcftools merge vcf*.vcf.gz | bgzip > m.vcf.gz
-    bcftools view -s `bcftools query -l m.vcf.gz|sort|tr '\n' ','|sed 's/,\$//'` m.vcf.gz -o claire_vs_ref.merged.vcf.gz
+    bcftools view -s `bcftools query -l m.vcf.gz|sort|tr '\n' ','|sed 's/,\$//'` m.vcf.gz -o clair_vs_ref.merged.vcf.gz
     rm m.vcf.gz
-    bcftools index claire_vs_ref.merged.vcf.gz
+    bcftools index clair_vs_ref.merged.vcf.gz
 fi
 """
 }
 
 process MERGE_CLAIR3_SENSITIVE_VCFS {
     publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
-	saveAs: {it.replaceFirst(/ref/, params.ref_id).replaceFirst(/claire/, "claire_sensitive_")}
+	saveAs: {it.replaceFirst(/ref/, params.ref_id).replaceFirst(/clair/, "clair_sensitive_")}
 
     input:
     path 'vcf*.vcf.gz'
 
     output:
-    tuple path('claire_vs_ref.merged.vcf.gz'), path('claire_vs_ref.merged.vcf.gz.csi')
+    tuple path('clair_vs_ref.merged.vcf.gz'), path('clair_vs_ref.merged.vcf.gz.csi')
 
     script:
     """
@@ -673,13 +685,13 @@ for f in vcf*.vcf.gz; do
     bcftools index \$f
 done
 if [ -f vcf.vcf.gz ]; then # Single file given, no merge needed
-    cp vcf.vcf.gz claire_vs_ref.merged.vcf.gz
-    mv vcf.vcf.gz.csi claire_vs_ref.merged.vcf.gz.csi
+    cp vcf.vcf.gz clair_vs_ref.merged.vcf.gz
+    mv vcf.vcf.gz.csi clair_vs_ref.merged.vcf.gz.csi
 else
     bcftools merge vcf*.vcf.gz | bgzip > m.vcf.gz
-    bcftools view -s `bcftools query -l m.vcf.gz|sort|tr '\n' ','|sed 's/,\$//'` m.vcf.gz -o claire_vs_ref.merged.vcf.gz
+    bcftools view -s `bcftools query -l m.vcf.gz|sort|tr '\n' ','|sed 's/,\$//'` m.vcf.gz -o clair_vs_ref.merged.vcf.gz
     rm m.vcf.gz
-    bcftools index claire_vs_ref.merged.vcf.gz
+    bcftools index clair_vs_ref.merged.vcf.gz
 fi
 """
 }
@@ -692,41 +704,57 @@ fi
 ////////////////////////////////////////////////////////////////////////
 workflow {
 
+    //// Normalize and check the provided parameters ///////////////////
+    if (params.help) {
+	println("""
+Nanopore pipeline for microbial genome
+""")
+	exit(0)
+    }
+    // Combine new and old style sample file parameter
+    sample_files = params.sample_files + params.sample_fastqs
+    if (sample_files == []) {
+	println("Please, provide --sample_files parameter")
+	exit(1)
+    }
+
+    
     //// Input file preparation ////////////////////////////////////////
-    input_files = Channel
-	.fromPath(params.sample_fastqs)
-	.map( {
+    channel.fromPath(sample_files, checkIfExists:true)
+	.map({ // Generate sample names from sample filename
 		meta = [name: it.getSimpleName()]
 		[meta, it]
-	    } )
-        .filter( { !params.exclude_samples.contains(it[0].name) } )
-
-    // Optionally convert CRAM/BAM to fastq    
-    input_files
+	    })
+        .filter({ !params.exclude_samples.contains(it[0].name) })
 	.branch( {
 		cram: it[1] ==~ /.*\.(cram|bam)$/
 		fastq: it[1] ==~ /.*\.fastq\.gz$/
 		dir: file(it[1]).exists() && file(it[1]).isDirectory()
 		unknown: true
 	    } )
-	.set { fastq_split_by_type }
-    fastq_split_by_type
-	.fastq
-	.concat(CRAM_TO_FASTQ_GZ(fastq_split_by_type.cram))
-	.concat(DIR_TO_FASTQ_GZ(fastq_split_by_type.dir))
-        // .view { "Using sample ${it}" }
-	.set { fastq }
+	.set { sample_files_split_by_type }
+
+    sample_files_split_by_type.unknown.view { "Sample file ${it[1]} has unsupported extension" }
+    
+    sample_files_split_by_type.fastq
+	.concat(sample_files_split_by_type.cram | CRAM_TO_FASTQ_GZ)
+	.concat(sample_files_split_by_type.dir  | DIR_TO_FASTQ_GZ )
+	.set { fastq } // "fastq" is now the channel for all input files in fastq with metadata
 
 
     //// Reference preparation /////////////////////////////////////////
-    ref = channel.value([[name: params.ref_id], file(params.ref_fa)]) | FASTA_ADD_FAI
-    ref_mmi = ref | FASTA_ADD_MMI // | view { "Using reference ${it}"}
+    channel.value([[name: params.ref_id], file(params.ref_fa)]) |
+	FASTA_ADD_FAI | set { ref }  // Value channel with name, fasta, and fai
+    ref |
+	FASTA_ADD_MMI | set { ref_mmi } // Value channel with name, fasta, fai, and mmi index
 
-
+    
     //// Model download ////////////////////////////////////////////////
     medaka_model_path = GET_MEDAKA_MODEL(params.medaka_model) // | view { "medaka model ${it}" }
     medaka_variant_model_path = GET_MEDAKA_VARIANT_MODEL(params.medaka_variant_model) // | view { "medaka variant model ${it}" }
-    clair_model_path = GET_CLAIR3_MODEL(params.claire3_model) // | view { "claire model ${it}" }
+    if (params.clair3) {
+	clair_model_path = GET_CLAIR3_MODEL(params.clair3_model) // | view { "clair model ${it}" }
+    }
 
 
     //// Consensus /////////////////////////////////////////////////////
@@ -746,20 +774,24 @@ workflow {
     CALL_VS_REF.out[1].map({it[1]}).collect() | MERGE_READS_VS_REF_VCFS_MM
 
     MERGE_JOINED_CALL_FILES(CALL_VS_REF.out[2].map({it[1]}).collect(),
-			    channel.fromPath(params.regions_annotation),
+			    file(params.regions_annotation, checkIfExists:true),
 			    ref, "")
     // Here we take the discordant vcf
     CONVERT_VCF_TO_TABLE(MERGE_JOINED_CALL_FILES.out[1].map({it[0]}), "common_variants.tsv")
 
     //// CLAIR3 consensus calling /////////////////////////////////////
-    CLAIR3_CALL(ref, MAP_READS_TO_REF.out, clair_model_path)
-    CLAIR3_CALL.out.map({it[1]}).collect() | MERGE_CLAIR3_VCFS
+    if (params.clair3) {
+	CLAIR3_CALL(ref, MAP_READS_TO_REF.out, clair_model_path)
+	CLAIR3_CALL.out.map({it[1]}).collect() | MERGE_CLAIR3_VCFS
 
-    CLAIR3_CALL_SENSITIVE(ref, MAP_READS_TO_REF.out, clair_model_path)
-    CLAIR3_CALL_SENSITIVE.out.map({it[1]}).collect() | MERGE_CLAIR3_SENSITIVE_VCFS
+	CLAIR3_CALL_SENSITIVE(ref, MAP_READS_TO_REF.out, clair_model_path)
+	CLAIR3_CALL_SENSITIVE.out.map({it[1]}).collect() | MERGE_CLAIR3_SENSITIVE_VCFS
+    }
 
     //// SNIFFLES consensus calling ///////////////////////////////
-    SNIFFLES_CALL(ref, MAP_READS_TO_REF.out)
+    if (params.sniffles) {
+	SNIFFLES_CALL(ref, MAP_READS_TO_REF.out)
+    }
 
     //// End: Calling vs Reference //////////////////////////////////////////
 
@@ -786,10 +818,10 @@ workflow {
 	CALL_VS_CONS.out[1].map({it[1]}).collect() | MERGE_VCFS_MM
 
 	MERGE_JOINED_CALL_FILES_CONS_LIFTED(CALL_VS_CONS.out[2].map({it[1]}).collect(),
-					    channel.fromPath(params.regions_annotation),
+					    file(params.regions_annotation, checkIfExists:true),
 					    cons_ref_fasta.map({it.subList(0,3)}), ".lifted")
 	MERGE_JOINED_CALL_FILES_CONS(CALL_VS_CONS.out[3].map({it[1]}).collect(),
-				     channel.fromPath(params.regions_annotation),
+				     file(params.regions_annotation, checkIfExists:true),
 				     cons_ref_fasta.map({it.subList(0,3)}), "")
 
 	// Here we take the common vcf, as tehy are vs reference sample already

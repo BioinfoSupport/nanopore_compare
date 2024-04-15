@@ -115,7 +115,7 @@ minimap2 -cx asm5 --cs -z1000000 ref.fasta ${fastq} | \
 // Calling by medaka from reads vs sequence
 process CLAIR3_CALL {
     publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
-	saveAs: { it.replaceFirst(/claire\/merge_output/, "claire_vs_"+ref_meta.name) }
+	saveAs: { it.replaceFirst(/clair\/merge_output/, "clair_vs_"+ref_meta.name) }
 
     input:
     tuple val(ref_meta), path(ref_fa), path(ref_fa_fai)
@@ -123,7 +123,7 @@ process CLAIR3_CALL {
     path(clair_model_path)
 
     output:
-    tuple val(meta), path("claire/merge_output.vcf.gz"), path("claire/merge_output.vcf.gz.tbi")
+    tuple val(meta), path("clair/merge_output.vcf.gz"), path("clair/merge_output.vcf.gz.tbi")
     
     script:
     """
@@ -131,12 +131,12 @@ process CLAIR3_CALL {
   --bam_fn=${bam} \
   --ref_fn=${ref_fa} \
   --threads=${task.cpus} \
-  --platform="${params.claire3_platform}" \
+  --platform="${params.clair3_platform}" \
   --include_all_ctgs \
   --haploid_precise \
   --model_path="${clair_model_path}" \
   --sample_name="${meta.name}" \
-  --output="`pwd`/claire"               ## absolute output path prefix
+  --output="`pwd`/clair"               ## absolute output path prefix
     """
 }
 
@@ -144,7 +144,7 @@ process CLAIR3_CALL {
 // Calling by medaka from reads vs sequence
 process CLAIR3_CALL_SENSITIVE {
     publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
-	saveAs: { it.replaceFirst(/claire\/merge_output/, "claire_sensitive_vs_"+ref_meta.name) }
+	saveAs: { it.replaceFirst(/clair\/merge_output/, "clair_sensitive_vs_"+ref_meta.name) }
 
     input:
     tuple val(ref_meta), path(ref_fa), path(ref_fa_fai)
@@ -152,7 +152,7 @@ process CLAIR3_CALL_SENSITIVE {
     path(clair_model_path)
 
     output:
-    tuple val(meta), path("claire/merge_output.vcf.gz"), path("claire/merge_output.vcf.gz.tbi")
+    tuple val(meta), path("clair/merge_output.vcf.gz"), path("clair/merge_output.vcf.gz.tbi")
     
     script:
     """
@@ -160,12 +160,12 @@ process CLAIR3_CALL_SENSITIVE {
   --bam_fn=${bam} \
   --ref_fn=${ref_fa} \
   --threads=${task.cpus} \
-  --platform="${params.claire3_platform}" \
+  --platform="${params.clair3_platform}" \
   --include_all_ctgs \
   --haploid_sensitive \
   --model_path="${clair_model_path}" \
   --sample_name="${meta.name}" \
-  --output="`pwd`/claire"               ## absolute output path prefix
+  --output="`pwd`/clair"               ## absolute output path prefix
     """
 }
 
@@ -284,7 +284,7 @@ process MERGE_JOINED_CALL_FILES {
 
     input:
     path 'vcf*.vcf.gz'
-    path regions_annotation
+    path regions_annotation // Optional
     tuple val(ref_meta), path(ref_fasta), path(ref_fai)
     val(suffix) // Indicate lifted for publishing
 
@@ -301,13 +301,9 @@ if [ -f vcf.vcf.gz ]; then # Single file given, no merge needed
     cp vcf.vcf.gz joined_vs_ref.merged0.vcf.gz
     mv vcf.vcf.gz.csi joined_vs_ref.merged0.vcf.gz.csi
 else
-    cat > samples_in_config.txt <<EOF
-${params.concordance_samples.join("\n")}
-EOF
-    for f in vcf*.vcf.gz; do bcftools query -l \$f; done | sort > samples_present.txt
-    grep -f samples_present.txt samples_in_config.txt > samples.txt
+    # Sort samples by name for convenience
+    for f in vcf*.vcf.gz; do bcftools query -l \$f; done | sort > samples.txt
 
-    # for f in vcf*.vcf.gz; do bcftools query -l \$f; done | sort > samples.txt
     bcftools merge -F x vcf*.vcf.gz | bcftools view -S samples.txt - | \
         bcftools view -e 'AN=0' - -o joined_vs_ref.merged0.vcf.gz
     bcftools index joined_vs_ref.merged0.vcf.gz
@@ -320,21 +316,21 @@ cat >annot.hdr <<EOF
 EOF
 bcftools annotate -h annot.hdr -c CHROM,FROM,TO,GENE -a ${file(params.gene_annotation_bed)} -o joined_vs_ref.merged1.vcf.gz joined_vs_ref.merged0.vcf.gz
 bcftools index joined_vs_ref.merged1.vcf.gz
-
-if [ -f ${regions_annotation} ]; then
+""" + ( regions_annotation.name != 'NO_FILE' ?
+	"""
     ## Fix potential bad regions from igv
     awk -F"\t" 'BEGIN{OFS="\t"}; NF<4{\$4="EmptyNote"}; {gsub(/ /,"_",\$4);print}' ${regions_annotation} > fixed.regions.bed
     bcftools annotate -a fixed.regions.bed -c CHROM,FROM,TO,NOTE -h annot.hdr joined_vs_ref.merged1.vcf.gz -o joined_vs_ref.merged.vcf.gz
     bcftools index  joined_vs_ref.merged.vcf.gz
-else
+        """ : """
     mv joined_vs_ref.merged1.vcf.gz joined_vs_ref.merged.vcf.gz
     mv joined_vs_ref.merged1.vcf.gz.csi joined_vs_ref.merged.vcf.gz.csi
-fi
-
+        """ ) +
+    """
 ## Filtering concordant variants
 bcftools filter -m+ -s CONCORDANT -e 'AN=N_SAMPLES && N_ALT=1' joined_vs_ref.merged.vcf.gz -o joined_vs_ref.merged.discordant.vcf.gz
 bcftools index joined_vs_ref.merged.discordant.vcf.gz
-"""
+    """
 }
 
 
