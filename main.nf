@@ -699,6 +699,47 @@ fi
 
 
 
+
+
+process MEDAKA_GENERATE_CONSENSUS {
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
+     	saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
+    cpus 2 // Check -- this is really teh max here? Do not override in parameters later
+
+    input:
+    tuple val(ref_meta), path(ref_fa), path(ref_fa_fai), path(ref_fa_mmi)
+    tuple val(meta), path(bam), path(bam_bai)
+    path(medaka_model_path)
+
+    output:
+    tuple val(meta), path("${meta.name}_vs_ref.hdf")
+    
+    script:
+    """
+medaka consensus "${bam}" "${meta.name}_vs_ref.hdf" \
+        --model "${medaka_model_path}" --batch_size "100" --threads "${task.cpus}"
+    """
+}
+
+process MEDAKA_VARIANTS {
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
+     	saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
+    cpus 2
+
+    input:
+    tuple val(ref_meta), path(ref_fa), path(ref_fa_fai), path(ref_fa_mmi)
+    path "consensus_hdf_*.hdf"
+
+    output:
+    path "medaka_variants_vs_ref.vcf"
+    
+    script:
+    """
+    medaka variant --verbose --ambig_ref "${ref_fa}" consensus_hdf_*.hdf "medaka_variants_vs_ref.vcf"
+    """
+}
+
+
 ////////////////////////////////////////////////////////////////////////
 ////    Main workflow
 ////////////////////////////////////////////////////////////////////////
@@ -806,7 +847,10 @@ Nanopore pipeline for microbial genome
 	ANNOTATE_CONSENSUS(ref, cons_ref_fasta)
 
 	MAP_READS_TO_CONS(cons_ref_fasta, fastq)
-    
+
+	MEDAKA_GENERATE_CONSENSUS(cons_ref_fasta, MAP_READS_TO_CONS.out, medaka_variant_model_path)
+	MEDAKA_VARIANTS(cons_ref_fasta, MEDAKA_GENERATE_CONSENSUS.out.map({it[1]}).collect())
+	
 	other_fastq = fastq.filter({
 	    it[0].name != params.consensus_ref_sample})
 	other_cons_fastq = POLISHED_CONSENSUS.out.filter({
@@ -850,3 +894,5 @@ workflow.onComplete = {
     file << json_indented << "\n"
     file.close()    
 }
+
+
