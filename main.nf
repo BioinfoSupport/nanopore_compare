@@ -21,7 +21,7 @@ params.consensus_ref_sample = ""
 params.ref_fa = "data/saureus/Saureus8325.fasta"
 params.ref_id = "SA8325"
 params.ref_gff = "data/saureus/Saureus8325.gff"
-params.gene_annotation_bed = "data/saureus/Saureus8325_gene_annotations.bed"
+params.gene_annotation_bed = "${workflow.projectDir}/assets/NO_FILE"
 
 params.store_dir = "store_dir"
 params.data_dir = "data"
