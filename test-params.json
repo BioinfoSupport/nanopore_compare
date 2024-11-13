@@ -12,5 +12,7 @@
     "ref_fa": "data/saureus/Saureus8325.fasta",
     "ref_id": "SA8325",
     "ref_gff": "data/saureus/Saureus8325.gff",
-    "gene_annotation_bed": "data/saureus/Saureus8325_gene_annotations.bed"
+    "gene_annotation_bed": "data/saureus/Saureus8325_gene_annotations.bed",
+
+    "my_medaka_compare": true
 }

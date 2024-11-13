@@ -26,6 +26,8 @@ params.gene_annotation_bed = "${workflow.projectDir}/assets/NO_FILE"
 params.store_dir = "store_dir"
 params.data_dir = "data"
 
+params.my_medaka_compare = false
+params.medaka_polish = true
 
 params.regions_annotation = "${workflow.projectDir}/assets/NO_FILE"
 // Some marginal calls appear
@@ -91,6 +93,11 @@ include {
     FLAGSTAT_MAPPED_READS
 } from './modules/mapping.nf'
 
+include {
+    PROKKA_ANNOTATE
+    LIFTOVER_REF_ANNOTATIONS 
+    ADD_GENOME_JSON 
+} from './modules/annotation.nf'
 
 ////////////////////////////////////////////////////////////////////////
 // Consensus generation
@@ -98,9 +105,9 @@ include {
 
 // Assembles draft consensus assembly
 process FLYE_ASSEMBLE {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
-	pattern: "flye/{assembly_info.txt,assembly_graph.gfa}",
-	saveAs: { it.replaceFirst(/\//, ".") }
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}"
+//        pattern: "flye/{assembly_info.txt,assembly_graph.gfa}",
+//        saveAs: { it.replaceFirst(/\//, ".") }
     
     input:
     tuple val(meta), path(fastq)
@@ -123,7 +130,7 @@ touch flye/assembly.fasta flye/assembly_info.txt flye/assembly_graph.gfa
 
 process FLYE_ASSEMBLE_FULL {
     publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
-	saveAs: { it.replaceFirst(/flye\//, "flye_full/") }
+        saveAs: { it.replaceFirst(/flye\//, "flye_full/") }
     
     input:
     tuple val(meta), path(fastq)
@@ -148,8 +155,8 @@ touch flye/assembly.fasta flye/assembly_info.txt flye/assembly_graph.gfa
 // Polish the draft consensus assembly, and save it as fastq, so qualities are avilable
 process MEDAKA_POLISH {
     // publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
-    // 	pattern: "medaka/consensus.fastq",
-    // 	saveAs: { "consensus.fastq" }
+    //         pattern: "medaka/consensus.fastq",
+    //         saveAs: { "consensus.fastq" }
     
     input:
     tuple val(meta), path(draft_fasta), path(fastq)
@@ -239,11 +246,16 @@ workflow POLISHED_CONSENSUS {
     if (params.do_flye_meta) {
         FLYE_ASSEMBLE_FULL(fastq)
     }
+    if (params.medaka_polish) {
     // Have to join matching on meta to have draft and fastq in sync
-    polished = MEDAKA_POLISH(draft[0].join(fastq), medaka_model_path)
+        polished = MEDAKA_POLISH(draft[0].join(fastq), medaka_model_path)
+        result = polished[0]
+    } else {
+        result = draft[0]
+    }
 
     emit:
-    polished[0]
+    result
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -269,10 +281,10 @@ workflow CALL_VS_REF {
     bam = REMAP_CONSENSUS_TO_REFERENCE(reference_fasta_nommi, cons_fastq)
 
     vcfs_mm2_annotated = MM2_CALL_ANNOTATE(
-	reference_fasta_nommi,
-	vcfs_mm2[0].map({[it[0],it[1]]})
-	    .join(
-		bam.map({[it[0],it[1]]})))
+        reference_fasta_nommi,
+        vcfs_mm2[0].map({[it[0],it[1]]})
+            .join(
+        bam.map({[it[0],it[1]]})))
     // TODO: Add vcfs based on consensus seq
     //       Annotate by conensus base quality
     // TODO: Merge properly
@@ -301,8 +313,8 @@ workflow CALL_VS_REF {
 
 process ADD_ASSEMBLY_PAF_FOR_LIFTOVER {
     publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/cons_meta.name}",
-	pattern: "*.paf",
-	saveAs: { it.replaceFirst(/ref/,ref_meta.name) }
+        pattern: "*.paf",
+        saveAs: { it.replaceFirst(/ref/,ref_meta.name) }
 
     input:
     tuple val(ref_meta), path(ref_fa), path(ref_fa_fai)
@@ -319,7 +331,7 @@ minimap2 -un -cx asm5 --cs ${ref_fa} ${cons_fastx} > consensus_vs_ref.mm2.paf
 
 process ADD_ASSEMBLY_CHAIN_FOR_LIFTOVER {
     publishDir mode: 'copy', path: "${file(params.data_dir)/cons_meta.name}",
-	saveAs: { it.replaceFirst(/ref/,ref_meta.name) }
+        saveAs: { it.replaceFirst(/ref/,ref_meta.name) }
 
     input:
     tuple val(ref_meta), path(ref_fa), path(ref_fa_fai)
@@ -341,7 +353,7 @@ paf2chain --input ref_vs_consensus.mm2.paf > ref_vs_consensus.chain
 // Problem: --no-comp-alleles produces bad result in case of "restoring" SNP. What is teh way arond this?
 process LIFTOVER_MEDAKA_CALLS {
     publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
-	saveAs: { it.replaceFirst(/ref/, paf_meta.name) }
+        saveAs: { it.replaceFirst(/ref/, paf_meta.name) }
     
     input:
     tuple val(paf_meta), path(fastx), path(fai), path(mmi), path(chain)
@@ -361,7 +373,7 @@ bcftools index medaka.reads_vs_ref.lifted.vcf.gz
 
 process LIFTOVER_MM2_CALLS {
     publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
-	saveAs: { it.replaceFirst(/ref/, paf_meta.name) }
+        saveAs: { it.replaceFirst(/ref/, paf_meta.name) }
 
     input:
     tuple val(paf_meta), path(fastx), path(fai), path(mmi), path(chain)
@@ -404,22 +416,22 @@ workflow CALL_VS_CONS {
 
     // Double danger -- losing positions
     vcfs_mm2_annotated = MM2_CALL_ANNOTATE_CONS(
-	reference_fasta,
-	vcfs_mm2[0].map({[it[0],it[1]]})
-	    .join(
-		bam.map({[it[0],it[1]]})))
+        reference_fasta,
+        vcfs_mm2[0].map({[it[0],it[1]]})
+            .join(
+        bam.map({[it[0],it[1]]})))
 
 
     // Before liftover
     joined_vcfs_nolift = MERGE_MEDAKA_AND_CONS_CALLS_CONS_NOLIFT(reference_fasta,
-								 vcfs[0].join(vcfs_mm2_annotated[0]), "")
+         vcfs[0].join(vcfs_mm2_annotated[0]), "")
     // Lifted files
     lift_vcfs = LIFTOVER_MEDAKA_CALLS(consensus_reference_paf_and_fasta, ref, vcfs[0]) // | map( {it.subList(0,3)} )
     lift_vcfs_mm2 = LIFTOVER_MM2_CALLS(consensus_reference_paf_and_fasta, ref, vcfs_mm2_annotated[0]) // | map( {it.subList(0,3)} )
 
     joined_vcfs = MERGE_MEDAKA_AND_CONS_CALLS_CONS_LIFTED(reference_fasta,
-						   lift_vcfs.map( {it.subList(0,3)} )
-						   .join(lift_vcfs_mm2.map( {it.subList(0,3)} )), ".lifted")
+           lift_vcfs.map( {it.subList(0,3)} )
+           .join(lift_vcfs_mm2.map( {it.subList(0,3)} )), ".lifted")
 
     emit:
     lift_vcfs[0]
@@ -431,85 +443,6 @@ workflow CALL_VS_CONS {
 
 
 
-
-
-process PROKKA_ANNOTATE {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}"
-    
-    input:
-    tuple val(meta), path(fasta), path(fai), path(mmi)
-
-    output:
-    tuple val(meta), path("prokka_annotation")
-
-    script:
-    """
-prokka --outdir prokka_annotation --prefix ${meta.name} --cpus ${task.cpus} ${params.prokka_args} ${fasta}
-    """
-}
-
-
-process ADD_GENOME_JSON {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}"
-    cpus = 1
-
-    input:
-    tuple val(meta), path("prokka_annotation")
-
-    output:
-    tuple val(meta), path("${meta.name}.genome.json")
-    path("prokka_annotation/${meta.name}.fsa.fai")
-
-    script:
-    """
-samtools faidx prokka_annotation/${meta.name}.fsa
-cat > ${meta.name}.genome.json <<EOF
-{
-  "id": "${meta.name}",
-  "name": "${meta.name}",
-  "fastaURL": "prokka_annotation/${meta.name}.fsa",
-  "indexURL": "prokka_annotation/${meta.name}.fsa.fai",
-  "tracks": [
-    {
-      "name": "Prokka Genes",
-      "format": "gff",
-      "url": "prokka_annotation/${meta.name}.gff"
-    },
-    {
-      "name": "Liftover ${params.ref_id}",
-      "format": "gff",
-      "url": "${params.ref_id}.lifted.gff"
-    }
-  ]
-}
-EOF
-    """
-}
-
-process LIFTOVER_REF_ANNOTATIONS {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}"
-    cpus = 1
-    
-    input:
-    tuple val(ref_meta), path(ref_fasta), path(ref_fai)
-    tuple val(meta), path(fasta), path(fai), path(mmi)
-    path(ref_gff)
-
-    output:
-    path("${ref_meta.name}.lifted.gff")
-    
-    script:
-    """
-minimap2 -un -cx asm5 ${ref_fasta} ${fasta} >liftover.paf
-paf2chain --input liftover.paf >liftover.chain
-CrossMap gff liftover.chain ${ref_gff} lifted.gff
-(
-  head -1 ${ref_gff}
-  cat lifted.gff
-) > ${ref_meta.name}.lifted.gff
-    """
-
-}
 
 
 workflow ANNOTATE_CONSENSUS {
@@ -526,13 +459,14 @@ workflow ANNOTATE_CONSENSUS {
 }
 
 
+
 ////////////////////// Final VCF merging processes
 
 process MERGE_VCFS {
     publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
-	saveAs: {
-	it.replaceFirst(/merged_vcf/,
-			'medaka.reads_vs_'+params.consensus_ref_sample+'.lifted.merged') }
+        saveAs: {
+        it.replaceFirst(/merged_vcf/,
+        'medaka.reads_vs_'+params.consensus_ref_sample+'.lifted.merged') }
 
     input:
     path 'vcf*.vcf.gz'
@@ -559,8 +493,8 @@ fi
 
 process MERGE_READS_VS_REF_VCFS {
     publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
-	saveAs: { it.replaceFirst(/merged_reads_vs_ref_vcf/,
-				  'medaka.reads_vs_'+params.ref_id+'.merged') }
+        saveAs: { it.replaceFirst(/merged_reads_vs_ref_vcf/,
+          'medaka.reads_vs_'+params.ref_id+'.merged') }
 
     input:
     path 'vcf*.vcf.gz'
@@ -587,8 +521,8 @@ fi
 
 process MERGE_READS_VS_REF_VCFS_MM {
     publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
-	saveAs: { it.replaceFirst(/merged_mm_vs_ref_vcf/,
-				  'mm2.cons_vs_'+params.ref_id+'.merged') }
+        saveAs: { it.replaceFirst(/merged_mm_vs_ref_vcf/,
+          'mm2.cons_vs_'+params.ref_id+'.merged') }
 
     input:
     path 'vcf*.vcf.gz'
@@ -615,9 +549,9 @@ fi
 
 process MERGE_VCFS_MM {
     publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
-	saveAs: {
-	it.replaceFirst(/merged_mm_vcf/,
-			'mm2.cons_vs_'+params.consensus_ref_sample+'.lifted.merged') }
+        saveAs: {
+        it.replaceFirst(/merged_mm_vcf/,
+        'mm2.cons_vs_'+params.consensus_ref_sample+'.lifted.merged') }
 
     input:
     path 'vcf*.vcf.gz'
@@ -644,7 +578,7 @@ fi
 
 process MERGE_CLAIR3_VCFS {
     publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
-	saveAs: {it.replaceFirst(/ref/, params.ref_id)}
+        saveAs: {it.replaceFirst(/ref/, params.ref_id)}
 
     input:
     path 'vcf*.vcf.gz'
@@ -671,7 +605,7 @@ fi
 
 process MERGE_CLAIR3_SENSITIVE_VCFS {
     publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
-	saveAs: {it.replaceFirst(/ref/, params.ref_id).replaceFirst(/clair/, "clair_sensitive_")}
+        saveAs: {it.replaceFirst(/ref/, params.ref_id).replaceFirst(/clair/, "clair_sensitive_")}
 
     input:
     path 'vcf*.vcf.gz'
@@ -701,9 +635,9 @@ fi
 
 
 
-process MEDAKA_GENERATE_CONSENSUS {
+process MEDAKA_GENERATE_CONSENSUS_HDF {
     publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
-     	saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
+             saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
     cpus 2 // Check -- this is really teh max here? Do not override in parameters later
 
     input:
@@ -720,23 +654,59 @@ medaka consensus "${bam}" "${meta.name}_vs_ref.hdf" \
         --model "${medaka_model_path}" --batch_size "100" --threads "${task.cpus}"
     """
 }
+process MEDAKA_REPOLISH {
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}"
 
-process MEDAKA_VARIANTS {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
-     	saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
-    cpus 2
+input:
+    tuple val(ref_meta), path(ref_fa), path(ref_fa_fai), path(ref_fa_mmi)
+    tuple val(ref_consensus_meta), path(ref_hdf)
+
+output:
+    tuple val(ref_meta), path(polished_fasta), path("${polished_fasta}.fai")    
+
+script:
+    polished_fasta = "${ref_meta.name}_repolished.fasta"
+    """
+medaka stitch --threads ${task.cpus} ${ref_hdf} ${ref_fa} ${polished_fasta}
+samtools faidx ${polished_fasta}
+    """    
+}
+// process MEDAKA_VARIANTS {
+//     publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
+//              saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
+//     cpus 2
+
+//    input:
+//     tuple val(ref_meta), path(ref_fa), path(ref_fa_fai), path(ref_fa_mmi)
+//     path "consensus_hdf_*.hdf"
+
+//     output:
+//     path "medaka_variants_vs_ref.vcf"
+    
+//     script:
+//     """
+//     medaka variant --verbose --ambig_ref "${ref_fa}" consensus_hdf_*.hdf "medaka_variants_vs_ref.vcf"
+//     """
+// }
+process MY_MEDAKA_COMPARE {
+    cpus 1
+    container "/home/users/b/bezrukov/medaka_compare/medaka_compare.sif"
+    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
+             saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
 
     input:
     tuple val(ref_meta), path(ref_fa), path(ref_fa_fai), path(ref_fa_mmi)
-    path "consensus_hdf_*.hdf"
+    tuple val(ref_consensus_meta), path(ref_hdf)
+    tuple val(meta), path(sample_hdf)
 
     output:
-    path "medaka_variants_vs_ref.vcf"
+    path "${meta.name}_medaka_compare_vs_ref.vcf"
     
     script:
     """
-    medaka variant --verbose --ambig_ref "${ref_fa}" consensus_hdf_*.hdf "medaka_variants_vs_ref.vcf"
+    medaka_compare ${ref_fa} ${ref_hdf} ${sample_hdf} > ${meta.name}_medaka_compare_vs_ref.vcf
     """
+    
 }
 
 
@@ -747,54 +717,54 @@ workflow {
 
     //// Normalize and check the provided parameters ///////////////////
     if (params.help) {
-	println("""
+        println("""
 Nanopore pipeline for microbial genome
 """)
-	exit(0)
+        exit(0)
     }
     // Combine new and old style sample file parameter
     sample_files = params.sample_files + params.sample_fastqs
     if (sample_files == []) {
-	println("Please, provide --sample_files parameter")
-	exit(1)
+        println("Please, provide --sample_files parameter")
+        exit(1)
     }
 
     
     //// Input file preparation ////////////////////////////////////////
     channel.fromPath(sample_files, checkIfExists:true)
-	.map({ // Generate sample names from sample filename
-		meta = [name: it.getSimpleName()]
-		[meta, it]
-	    })
+        .map({ // Generate sample names from sample filename
+        meta = [name: it.getSimpleName()]
+        [meta, it]
+            })
         .filter({ !params.exclude_samples.contains(it[0].name) })
-	.branch( {
-		cram: it[1] ==~ /.*\.(cram|bam)$/
-		fastq: it[1] ==~ /.*\.fastq\.gz$/
-		dir: file(it[1]).exists() && file(it[1]).isDirectory()
-		unknown: true
-	    } )
-	.set { sample_files_split_by_type }
+        .branch( {
+        cram: it[1] ==~ ".*\\.(cram|bam)\$"
+        fastq: it[1] ==~ ".*\\.fastq\\.gz\$"
+        dir: file(it[1]).exists() && file(it[1]).isDirectory()
+        unknown: true
+            } )
+        .set { sample_files_split_by_type }
 
     sample_files_split_by_type.unknown.view { "Sample file ${it[1]} has unsupported extension" }
     
     sample_files_split_by_type.fastq
-	.concat(sample_files_split_by_type.cram | CRAM_TO_FASTQ_GZ)
-	.concat(sample_files_split_by_type.dir  | DIR_TO_FASTQ_GZ )
-	.set { fastq } // "fastq" is now the channel for all input files in fastq with metadata
+        .concat(sample_files_split_by_type.cram | CRAM_TO_FASTQ_GZ)
+        .concat(sample_files_split_by_type.dir  | DIR_TO_FASTQ_GZ )
+        .set { fastq } // "fastq" is now the channel for all input files in fastq with metadata
 
 
     //// Reference preparation /////////////////////////////////////////
     channel.value([[name: params.ref_id], file(params.ref_fa)]) |
-	FASTA_ADD_FAI | set { ref }  // Value channel with name, fasta, and fai
+        FASTA_ADD_FAI | set { ref }  // Value channel with name, fasta, and fai
     ref |
-	FASTA_ADD_MMI | set { ref_mmi } // Value channel with name, fasta, fai, and mmi index
+        FASTA_ADD_MMI | set { ref_mmi } // Value channel with name, fasta, fai, and mmi index
 
     
     //// Model download ////////////////////////////////////////////////
     medaka_model_path = GET_MEDAKA_MODEL(params.medaka_model) // | view { "medaka model ${it}" }
     medaka_variant_model_path = GET_MEDAKA_VARIANT_MODEL(params.medaka_variant_model) // | view { "medaka variant model ${it}" }
     if (params.clair3) {
-	clair_model_path = GET_CLAIR3_MODEL(params.clair3_model) // | view { "clair model ${it}" }
+        clair_model_path = GET_CLAIR3_MODEL(params.clair3_model) // | view { "clair model ${it}" }
     }
 
 
@@ -815,63 +785,72 @@ Nanopore pipeline for microbial genome
     CALL_VS_REF.out[1].map({it[1]}).collect() | MERGE_READS_VS_REF_VCFS_MM
 
     MERGE_JOINED_CALL_FILES(CALL_VS_REF.out[2].map({it[1]}).collect(),
-			    file(params.regions_annotation, checkIfExists:true),
-			    ref, "")
+            file(params.regions_annotation, checkIfExists:true),
+            ref, "")
     // Here we take the discordant vcf
     CONVERT_VCF_TO_TABLE(MERGE_JOINED_CALL_FILES.out[1].map({it[0]}), "common_variants.tsv")
 
     //// CLAIR3 consensus calling /////////////////////////////////////
     if (params.clair3) {
-	CLAIR3_CALL(ref, MAP_READS_TO_REF.out, clair_model_path)
-	CLAIR3_CALL.out.map({it[1]}).collect() | MERGE_CLAIR3_VCFS
+        CLAIR3_CALL(ref, MAP_READS_TO_REF.out, clair_model_path)
+        CLAIR3_CALL.out.map({it[1]}).collect() | MERGE_CLAIR3_VCFS
 
-	CLAIR3_CALL_SENSITIVE(ref, MAP_READS_TO_REF.out, clair_model_path)
-	CLAIR3_CALL_SENSITIVE.out.map({it[1]}).collect() | MERGE_CLAIR3_SENSITIVE_VCFS
+        CLAIR3_CALL_SENSITIVE(ref, MAP_READS_TO_REF.out, clair_model_path)
+        CLAIR3_CALL_SENSITIVE.out.map({it[1]}).collect() | MERGE_CLAIR3_SENSITIVE_VCFS
     }
 
     //// SNIFFLES consensus calling ///////////////////////////////
     if (params.sniffles) {
-	SNIFFLES_CALL(ref, MAP_READS_TO_REF.out)
+        SNIFFLES_CALL(ref, MAP_READS_TO_REF.out)
     }
 
     //// End: Calling vs Reference //////////////////////////////////////////
 
     if (params.consensus_ref_sample != "") {
     
-	//// Calling vs selected sample consensus //////////////////////////
-	cons_ref_fasta = POLISHED_CONSENSUS.out.first({
-	    it[0].name == params.consensus_ref_sample}) | 
-	    FASTQ_TO_FASTA_MMI
-	cons_ref_paf_fasta = ADD_ASSEMBLY_CHAIN_FOR_LIFTOVER(ref, cons_ref_fasta)
+        //// Calling vs selected sample consensus //////////////////////////
+        cons_ref_fasta = POLISHED_CONSENSUS.out.first({
+            it[0].name == params.consensus_ref_sample}) | 
+            FASTQ_TO_FASTA_MMI
+        cons_ref_paf_fasta = ADD_ASSEMBLY_CHAIN_FOR_LIFTOVER(ref, cons_ref_fasta)
 
-	ANNOTATE_CONSENSUS(ref, cons_ref_fasta)
+        ANNOTATE_CONSENSUS(ref, cons_ref_fasta)
 
-	MAP_READS_TO_CONS(cons_ref_fasta, fastq)
+        MAP_READS_TO_CONS(cons_ref_fasta, fastq)
 
-	MEDAKA_GENERATE_CONSENSUS(cons_ref_fasta, MAP_READS_TO_CONS.out, medaka_variant_model_path)
-	MEDAKA_VARIANTS(cons_ref_fasta, MEDAKA_GENERATE_CONSENSUS.out.map({it[1]}).collect())
-	
-	other_fastq = fastq.filter({
-	    it[0].name != params.consensus_ref_sample})
-	other_cons_fastq = POLISHED_CONSENSUS.out.filter({
-	    it[0].name != params.consensus_ref_sample})
+        // It is not fully clear if it is better to use variant or consensus medaka model here
+        if (params.my_medaka_compare) {
+            MEDAKA_GENERATE_CONSENSUS_HDF(cons_ref_fasta, MAP_READS_TO_CONS.out, medaka_variant_model_path)
+            // MEDAKA_GENERATE_CONSENSUS_HDF.out | view
+            ref_hdf = MEDAKA_GENERATE_CONSENSUS_HDF.out.first({it[0].name==params.consensus_ref_sample})
+            other_hdf = MEDAKA_GENERATE_CONSENSUS_HDF.out.filter({it[0].name!=params.consensus_ref_sample})
+            // ref_hdf | view
+            // other_hdf|view
+            MY_MEDAKA_COMPARE(cons_ref_fasta, ref_hdf, other_hdf)
+        }
 
-	CALL_VS_CONS(cons_ref_paf_fasta, other_cons_fastq, other_fastq, medaka_variant_model_path, ref) // | view
+        
+        other_fastq = fastq.filter({
+            it[0].name != params.consensus_ref_sample})
+        other_cons_fastq = POLISHED_CONSENSUS.out.filter({
+            it[0].name != params.consensus_ref_sample})
+
+        CALL_VS_CONS(cons_ref_paf_fasta, other_cons_fastq, other_fastq, medaka_variant_model_path, ref) // | view
     
-	CALL_VS_CONS.out[0].map({it[1]}).collect() | MERGE_VCFS
-	CALL_VS_CONS.out[1].map({it[1]}).collect() | MERGE_VCFS_MM
+        CALL_VS_CONS.out[0].map({it[1]}).collect() | MERGE_VCFS
+        CALL_VS_CONS.out[1].map({it[1]}).collect() | MERGE_VCFS_MM
 
-	MERGE_JOINED_CALL_FILES_CONS_LIFTED(CALL_VS_CONS.out[2].map({it[1]}).collect(),
-					    file(params.regions_annotation, checkIfExists:true),
-					    cons_ref_fasta.map({it.subList(0,3)}), ".lifted")
-	MERGE_JOINED_CALL_FILES_CONS(CALL_VS_CONS.out[3].map({it[1]}).collect(),
-				     file(params.regions_annotation, checkIfExists:true),
-				     cons_ref_fasta.map({it.subList(0,3)}), "")
+        MERGE_JOINED_CALL_FILES_CONS_LIFTED(CALL_VS_CONS.out[2].map({it[1]}).collect(),
+            file(params.regions_annotation, checkIfExists:true),
+            cons_ref_fasta.map({it.subList(0,3)}), ".lifted")
+        MERGE_JOINED_CALL_FILES_CONS(CALL_VS_CONS.out[3].map({it[1]}).collect(),
+             file(params.regions_annotation, checkIfExists:true),
+             cons_ref_fasta.map({it.subList(0,3)}), "")
 
-	// Here we take the common vcf, as tehy are vs reference sample already
-	CONVERT_VCF_TO_TABLE_CONS(MERGE_JOINED_CALL_FILES_CONS.out[0].map({it[0]}), "variants_vs_"+params.consensus_ref_sample+".tsv")
+        // Here we take the common vcf, as tehy are vs reference sample already
+        CONVERT_VCF_TO_TABLE_CONS(MERGE_JOINED_CALL_FILES_CONS.out[0].map({it[0]}), "variants_vs_"+params.consensus_ref_sample+".tsv")
 
-	//// End: Calling vs selected sample consensus //////////////////////////
+        //// End: Calling vs selected sample consensus //////////////////////////
     }
     
 }
