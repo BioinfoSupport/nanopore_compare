@@ -6,14 +6,14 @@ digraph mygraph {
   {
     rank = "same";
     node [shape=ellipse]
+    reference
     s1 [label="Sample1.FASTQ\n(reference sample)"]
     s2 [label="Sample2.FASTQ"]
     s3 [label="Sample3.FASTQ"]
-    reference
   }
 
   {
-    node [shape=box, label="calling pipline"]
+    node [shape=box, label="calling pipeline"]
     c1r
     c2r
     c3r
@@ -33,13 +33,10 @@ digraph mygraph {
 
   s1cons [shape=ellipse, style=dashed, label="sample1 consensus.FASTA"]
 
-  s1 -> c1r
-  s2 -> c2r
-  s3 -> c3r
+  s1 -> c1r -> s1r
+  s2 -> c2r -> s2r
+  s3 -> c3r -> s3r
   reference -> {c1r c2r c3r}
-  c1r -> s1r
-  c2r -> s2r
-  c3r -> s3r
 
   c1r -> s1cons [style=dashed]
   s1cons -> {c21 c31}
