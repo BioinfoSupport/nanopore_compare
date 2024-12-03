@@ -1,0 +1,50 @@
+digraph mygraph {
+  fontname="Helvetica,Arial,sans-serif"
+  node [fontname="Helvetica,Arial,sans-serif"]
+  edge [fontname="Helvetica,Arial,sans-serif"]
+
+  {
+    rank = "same";
+    node [shape=ellipse]
+    s1 [label="Sample1.FASTQ\n(reference sample)"]
+    s2 [label="Sample2.FASTQ"]
+    s3 [label="Sample3.FASTQ"]
+    reference
+  }
+
+  {
+    node [shape=box, label="calling pipline"]
+    c1r
+    c2r
+    c3r
+    c21
+    c31
+  }
+
+  {
+    rank = "same";
+    node [shape=ellipse]
+    s1r [label="s1 vs ref.VCF"]
+    s2r [label="s2 vs ref.VCF"]
+    s3r [label="s3 vs ref.VCF"]
+    s21 [label="s2 vs s1.VCF"]
+    s31 [label="s3 vs s1.VCF"]
+  }
+
+  s1cons [shape=ellipse, style=dashed, label="sample1 consensus.FASTA"]
+
+  s1 -> c1r
+  s2 -> c2r
+  s3 -> c3r
+  reference -> {c1r c2r c3r}
+  c1r -> s1r
+  c2r -> s2r
+  c3r -> s3r
+
+  c1r -> s1cons [style=dashed]
+  s1cons -> {c21 c31}
+  s2 -> c21 -> s21
+  s3 -> c31 -> s31
+  
+  
+}

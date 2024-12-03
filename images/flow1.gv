@@ -1,0 +1,44 @@
+digraph mygraph {
+  fontname="Helvetica,Arial,sans-serif"
+  node [fontname="Helvetica,Arial,sans-serif"]
+  edge [fontname="Helvetica,Arial,sans-serif"]
+  node [shape=parallelogram];
+
+  subgraph cluster_1 {
+	label = "calling pipeline";
+
+  	"consensus.FASTQ" [shape=ellipse]
+ 	"medaka.VCF" [shape=ellipse]
+  	"consensus.VCF" [shape=ellipse]
+
+        "FLYE" -> "MEDAKA polish";
+  	"MEDAKA polish" -> "consensus.FASTQ"
+  	"MEDAKA haploid_variant" -> "medaka.VCF"
+  	"consensus.FASTQ" -> "minimap2 call"
+  	"minimap2 call" -> "consensus.VCF"
+  	"consensus.VCF" -> "merge vcfs"
+  	"medaka.VCF" -> "merge vcfs"
+  }
+
+  {
+    rank = "same";
+    node [shape = "ellipse"];
+    "sample.FASTA"
+    "reference.FASTA"
+  }
+  
+  {
+    rank = "same";
+    node [shape = "ellipse"];
+    "consensus.FASTA" [style="dashed"]
+    "combined.vcf"
+  }
+
+  "reference.FASTA" -> "minimap2 call"
+  "consensus.FASTQ" -> "consensus.FASTA" [style="dashed"]
+  "sample.FASTA" -> "MEDAKA haploid_variant"
+  "sample.FASTA" -> "FLYE"
+  "reference.FASTA" -> "MEDAKA haploid_variant"
+  "merge vcfs" -> "combined.vcf"
+
+}
