@@ -128,41 +128,41 @@
 <path fill="none" stroke="black" d="M409.06,-71.7C409.06,-64.24 409.06,-55.32 409.06,-46.97"/>
 <polygon fill="black" stroke="black" points="412.56,-47.1 409.06,-37.1 405.56,-47.1 412.56,-47.1"/>
 </g>
-<!-- sample.FASTA -->
+<!-- sample.FASTQ -->
 <g id="node9" class="node">
-<title>sample.FASTA</title>
-<ellipse fill="none" stroke="black" cx="261.06" cy="-525" rx="68.89" ry="18"/>
-<text text-anchor="middle" x="261.06" y="-519.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">sample.FASTA</text>
+<title>sample.FASTQ</title>
+<ellipse fill="none" stroke="black" cx="261.06" cy="-525" rx="70.84" ry="18"/>
+<text text-anchor="middle" x="261.06" y="-519.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">sample.FASTQ</text>
 </g>
-<!-- sample.FASTA&#45;&gt;FLYE -->
+<!-- sample.FASTQ&#45;&gt;FLYE -->
 <g id="edge11" class="edge">
-<title>sample.FASTA&#45;&gt;FLYE</title>
+<title>sample.FASTQ&#45;&gt;FLYE</title>
 <path fill="none" stroke="black" d="M257.5,-506.7C255.81,-498.49 253.75,-488.46 251.85,-479.19"/>
 <polygon fill="black" stroke="black" points="255.08,-478.52 249.64,-469.43 248.22,-479.93 255.08,-478.52"/>
 </g>
-<!-- sample.FASTA&#45;&gt;MEDAKA haploid_variant -->
+<!-- sample.FASTQ&#45;&gt;MEDAKA haploid_variant -->
 <g id="edge10" class="edge">
-<title>sample.FASTA&#45;&gt;MEDAKA haploid_variant</title>
+<title>sample.FASTQ&#45;&gt;MEDAKA haploid_variant</title>
 <path fill="none" stroke="black" d="M291.37,-508.37C294.97,-505.6 298.32,-502.48 301.06,-499 330.82,-461.08 327.4,-443.6 335.06,-396 342.86,-347.45 333.68,-331.66 311.06,-288 306.19,-278.61 299.75,-269.09 293.5,-260.75"/>
 <polygon fill="black" stroke="black" points="295.79,-258.99 286.89,-253.23 290.26,-263.28 295.79,-258.99"/>
 </g>
 <!-- reference.FASTA -->
 <g id="node10" class="node">
 <title>reference.FASTA</title>
-<ellipse fill="none" stroke="black" cx="482.06" cy="-525" rx="77.18" ry="18"/>
-<text text-anchor="middle" x="482.06" y="-519.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">reference.FASTA</text>
+<ellipse fill="none" stroke="black" cx="483.06" cy="-525" rx="77.18" ry="18"/>
+<text text-anchor="middle" x="483.06" y="-519.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">reference.FASTA</text>
 </g>
 <!-- reference.FASTA&#45;&gt;MEDAKA haploid_variant -->
 <g id="edge12" class="edge">
 <title>reference.FASTA&#45;&gt;MEDAKA haploid_variant</title>
-<path fill="none" stroke="black" d="M473.47,-506.84C452.72,-466.27 396.8,-362.27 333.06,-288 324.27,-277.77 313.49,-267.75 303.45,-259.23"/>
-<polygon fill="black" stroke="black" points="306.18,-256.12 296.24,-252.45 301.72,-261.52 306.18,-256.12"/>
+<path fill="none" stroke="black" d="M474.39,-506.85C453.44,-466.29 397.04,-362.32 333.06,-288 324.26,-277.78 313.47,-267.77 303.43,-259.24"/>
+<polygon fill="black" stroke="black" points="306.16,-256.14 296.22,-252.46 301.7,-261.53 306.16,-256.14"/>
 </g>
 <!-- reference.FASTA&#45;&gt;minimap2 call -->
 <g id="edge8" class="edge">
 <title>reference.FASTA&#45;&gt;minimap2 call</title>
-<path fill="none" stroke="black" d="M485.93,-506.79C496.76,-458.61 527.47,-322.09 540.78,-262.92"/>
-<polygon fill="black" stroke="black" points="544.34,-264.01 543.12,-253.49 537.51,-262.48 544.34,-264.01"/>
+<path fill="none" stroke="black" d="M486.87,-506.79C497.54,-458.61 527.77,-322.09 540.87,-262.92"/>
+<polygon fill="black" stroke="black" points="544.44,-264.01 543.18,-253.49 537.6,-262.49 544.44,-264.01"/>
 </g>
 </g>
 </svg>

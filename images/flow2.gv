@@ -7,7 +7,7 @@ digraph mygraph {
     rank = "same";
     node [shape=ellipse]
     reference
-    s1 [label="Sample1.FASTQ\n(reference sample)"]
+    s1 [label="Sample1.FASTQ\n(WT)"]
     s2 [label="Sample2.FASTQ"]
     s3 [label="Sample3.FASTQ"]
   }
@@ -27,11 +27,11 @@ digraph mygraph {
     s1r [label="s1 vs ref.VCF"]
     s2r [label="s2 vs ref.VCF"]
     s3r [label="s3 vs ref.VCF"]
-    s21 [label="s2 vs s1.VCF"]
-    s31 [label="s3 vs s1.VCF"]
+    s21 [label="s2 vs WT.VCF"]
+    s31 [label="s3 vs WT.VCF"]
   }
 
-  s1cons [shape=ellipse, style=dashed, label="sample1 consensus.FASTA"]
+  s1cons [shape=ellipse, style=dashed, label="s1 (WT) consensus.FASTA"]
 
   s1 -> c1r -> s1r
   s2 -> c2r -> s2r

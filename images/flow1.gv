@@ -23,7 +23,7 @@ digraph mygraph {
   {
     rank = "same";
     node [shape = "ellipse"];
-    "sample.FASTA"
+    "sample.FASTQ"
     "reference.FASTA"
   }
   
@@ -36,8 +36,8 @@ digraph mygraph {
 
   "reference.FASTA" -> "minimap2 call"
   "consensus.FASTQ" -> "consensus.FASTA" [style="dashed"]
-  "sample.FASTA" -> "MEDAKA haploid_variant"
-  "sample.FASTA" -> "FLYE"
+  "sample.FASTQ" -> "MEDAKA haploid_variant"
+  "sample.FASTQ" -> "FLYE"
   "reference.FASTA" -> "MEDAKA haploid_variant"
   "merge vcfs" -> "combined.vcf"
 
