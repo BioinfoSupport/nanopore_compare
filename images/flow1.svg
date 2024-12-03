@@ -17,20 +17,20 @@
 <!-- consensus.FASTQ -->
 <g id="node1" class="node">
 <title>consensus.FASTQ</title>
-<ellipse fill="none" stroke="black" cx="218.06" cy="-306" rx="84.01" ry="18"/>
-<text text-anchor="middle" x="218.06" y="-300.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">consensus.FASTQ</text>
+<ellipse fill="none" stroke="black" cx="205.06" cy="-306" rx="84.01" ry="18"/>
+<text text-anchor="middle" x="205.06" y="-300.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">consensus.FASTQ</text>
 </g>
 <!-- minimap2 call -->
-<g id="node7" class="node">
+<g id="node6" class="node">
 <title>minimap2 call</title>
-<polygon fill="none" stroke="black" points="642.35,-252 490.76,-252 451.76,-216 603.35,-216 642.35,-252"/>
-<text text-anchor="middle" x="547.06" y="-228.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">minimap2 call</text>
+<polygon fill="none" stroke="black" points="300.35,-252 148.76,-252 109.76,-216 261.35,-216 300.35,-252"/>
+<text text-anchor="middle" x="205.06" y="-228.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">minimap2 call</text>
 </g>
 <!-- consensus.FASTQ&#45;&gt;minimap2 call -->
-<g id="edge4" class="edge">
+<g id="edge3" class="edge">
 <title>consensus.FASTQ&#45;&gt;minimap2 call</title>
-<path fill="none" stroke="black" d="M276.12,-292.65C331.72,-280.82 415.75,-262.94 475.47,-250.23"/>
-<polygon fill="black" stroke="black" points="475.9,-253.51 484.95,-248 474.44,-246.66 475.9,-253.51"/>
+<path fill="none" stroke="black" d="M205.06,-287.7C205.06,-280.24 205.06,-271.32 205.06,-262.97"/>
+<polygon fill="black" stroke="black" points="208.56,-263.1 205.06,-253.1 201.56,-263.1 208.56,-263.1"/>
 </g>
 <!-- consensus.FASTA -->
 <g id="node11" class="node">
@@ -41,128 +41,128 @@
 <!-- consensus.FASTQ&#45;&gt;consensus.FASTA -->
 <g id="edge9" class="edge">
 <title>consensus.FASTQ&#45;&gt;consensus.FASTA</title>
-<path fill="none" stroke="black" stroke-dasharray="5,2" d="M160.77,-292.41C138.55,-284.55 115.11,-271.97 101.06,-252 57.35,-189.92 67.37,-94.14 75.94,-47.07"/>
-<polygon fill="black" stroke="black" points="79.53,-47.95 78,-37.47 72.66,-46.62 79.53,-47.95"/>
+<path fill="none" stroke="black" stroke-dasharray="5,2" d="M154.81,-291.24C134.79,-283.13 113.58,-270.69 101.06,-252 58.79,-188.93 68.15,-93.61 76.25,-46.86"/>
+<polygon fill="black" stroke="black" points="79.82,-47.8 78.2,-37.33 72.94,-46.53 79.82,-47.8"/>
 </g>
 <!-- medaka.VCF -->
 <g id="node2" class="node">
 <title>medaka.VCF</title>
-<ellipse fill="none" stroke="black" cx="303.06" cy="-162" rx="62.07" ry="18"/>
-<text text-anchor="middle" x="303.06" y="-156.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">medaka.VCF</text>
+<ellipse fill="none" stroke="black" cx="419.06" cy="-162" rx="62.07" ry="18"/>
+<text text-anchor="middle" x="419.06" y="-156.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">medaka.VCF</text>
 </g>
 <!-- merge vcfs -->
-<g id="node8" class="node">
+<g id="node7" class="node">
 <title>merge vcfs</title>
-<polygon fill="none" stroke="black" points="487.91,-108 362.47,-108 330.2,-72 455.64,-72 487.91,-108"/>
-<text text-anchor="middle" x="409.06" y="-84.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">merge vcfs</text>
+<polygon fill="none" stroke="black" points="364.91,-108 239.47,-108 207.2,-72 332.64,-72 364.91,-108"/>
+<text text-anchor="middle" x="286.06" y="-84.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">merge vcfs</text>
 </g>
 <!-- medaka.VCF&#45;&gt;merge vcfs -->
 <g id="edge7" class="edge">
 <title>medaka.VCF&#45;&gt;merge vcfs</title>
-<path fill="none" stroke="black" d="M327.11,-145.12C341,-135.94 358.71,-124.25 374.11,-114.07"/>
-<polygon fill="black" stroke="black" points="375.45,-116.72 381.87,-108.29 371.6,-110.88 375.45,-116.72"/>
+<path fill="none" stroke="black" d="M389.87,-145.64C371.86,-136.16 348.46,-123.85 328.44,-113.31"/>
+<polygon fill="black" stroke="black" points="330.39,-109.85 319.91,-108.29 327.13,-116.05 330.39,-109.85"/>
 </g>
 <!-- consensus.VCF -->
 <g id="node3" class="node">
 <title>consensus.VCF</title>
-<ellipse fill="none" stroke="black" cx="516.06" cy="-162" rx="72.31" ry="18"/>
-<text text-anchor="middle" x="516.06" y="-156.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">consensus.VCF</text>
+<ellipse fill="none" stroke="black" cx="246.06" cy="-162" rx="72.31" ry="18"/>
+<text text-anchor="middle" x="246.06" y="-156.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">consensus.VCF</text>
 </g>
 <!-- consensus.VCF&#45;&gt;merge vcfs -->
-<g id="edge6" class="edge">
+<g id="edge5" class="edge">
 <title>consensus.VCF&#45;&gt;merge vcfs</title>
-<path fill="none" stroke="black" d="M491.24,-144.76C477.43,-135.73 460.01,-124.34 444.77,-114.36"/>
-<polygon fill="black" stroke="black" points="446.89,-110.92 436.61,-108.37 443.06,-116.77 446.89,-110.92"/>
+<path fill="none" stroke="black" d="M255.94,-143.7C260.45,-135.81 265.88,-126.3 270.89,-117.55"/>
+<polygon fill="black" stroke="black" points="274.36,-119.52 276.28,-109.1 268.28,-116.05 274.36,-119.52"/>
 </g>
 <!-- FLYE -->
 <g id="node4" class="node">
 <title>FLYE</title>
-<polygon fill="none" stroke="black" points="292.03,-468 218.89,-468 200.08,-432 273.22,-432 292.03,-468"/>
-<text text-anchor="middle" x="246.06" y="-444.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">FLYE</text>
+<polygon fill="none" stroke="black" points="306.03,-468 232.89,-468 214.08,-432 287.22,-432 306.03,-468"/>
+<text text-anchor="middle" x="260.06" y="-444.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">FLYE</text>
 </g>
 <!-- MEDAKA polish -->
 <g id="node5" class="node">
 <title>MEDAKA polish</title>
-<polygon fill="none" stroke="black" points="326.21,-396 154.16,-396 109.9,-360 281.95,-360 326.21,-396"/>
-<text text-anchor="middle" x="218.06" y="-372.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">MEDAKA polish</text>
+<polygon fill="none" stroke="black" points="351.21,-396 179.16,-396 134.9,-360 306.95,-360 351.21,-396"/>
+<text text-anchor="middle" x="243.06" y="-372.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">MEDAKA polish</text>
 </g>
 <!-- FLYE&#45;&gt;MEDAKA polish -->
 <g id="edge1" class="edge">
 <title>FLYE&#45;&gt;MEDAKA polish</title>
-<path fill="none" stroke="black" d="M239.13,-431.7C236.05,-423.98 232.34,-414.71 228.9,-406.11"/>
-<polygon fill="black" stroke="black" points="231.86,-405.09 224.9,-397.1 225.36,-407.69 231.86,-405.09"/>
+<path fill="none" stroke="black" d="M255.85,-431.7C254.02,-424.15 251.83,-415.12 249.78,-406.68"/>
+<polygon fill="black" stroke="black" points="252.97,-406 247.21,-397.1 246.17,-407.65 252.97,-406"/>
 </g>
 <!-- MEDAKA polish&#45;&gt;consensus.FASTQ -->
 <g id="edge2" class="edge">
 <title>MEDAKA polish&#45;&gt;consensus.FASTQ</title>
-<path fill="none" stroke="black" d="M218.06,-359.7C218.06,-352.24 218.06,-343.32 218.06,-334.97"/>
-<polygon fill="black" stroke="black" points="221.56,-335.1 218.06,-325.1 214.56,-335.1 221.56,-335.1"/>
-</g>
-<!-- MEDAKA haploid_variant -->
-<g id="node6" class="node">
-<title>MEDAKA haploid_variant</title>
-<polygon fill="none" stroke="black" points="433.82,-252 176.49,-252 110.29,-216 367.62,-216 433.82,-252"/>
-<text text-anchor="middle" x="272.06" y="-228.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">MEDAKA haploid_variant</text>
-</g>
-<!-- MEDAKA haploid_variant&#45;&gt;medaka.VCF -->
-<g id="edge3" class="edge">
-<title>MEDAKA haploid_variant&#45;&gt;medaka.VCF</title>
-<path fill="none" stroke="black" d="M279.72,-215.7C283.13,-207.98 287.24,-198.71 291.05,-190.11"/>
-<polygon fill="black" stroke="black" points="294.63,-191.67 295.48,-181.1 288.23,-188.83 294.63,-191.67"/>
+<path fill="none" stroke="black" d="M233.66,-359.7C229.38,-351.81 224.22,-342.3 219.47,-333.55"/>
+<polygon fill="black" stroke="black" points="222.19,-332.22 214.34,-325.1 216.04,-335.56 222.19,-332.22"/>
 </g>
 <!-- minimap2 call&#45;&gt;consensus.VCF -->
-<g id="edge5" class="edge">
+<g id="edge4" class="edge">
 <title>minimap2 call&#45;&gt;consensus.VCF</title>
-<path fill="none" stroke="black" d="M539.39,-215.7C535.98,-207.98 531.87,-198.71 528.06,-190.11"/>
-<polygon fill="black" stroke="black" points="530.88,-188.83 523.63,-181.1 524.48,-191.67 530.88,-188.83"/>
+<path fill="none" stroke="black" d="M215.19,-215.7C219.81,-207.81 225.38,-198.3 230.51,-189.55"/>
+<polygon fill="black" stroke="black" points="234,-191.5 236.04,-181.1 227.96,-187.96 234,-191.5"/>
 </g>
 <!-- combined.vcf -->
 <g id="node12" class="node">
 <title>combined.vcf</title>
-<ellipse fill="none" stroke="black" cx="409.06" cy="-18" rx="62.56" ry="18"/>
-<text text-anchor="middle" x="409.06" y="-12.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">combined.vcf</text>
+<ellipse fill="none" stroke="black" cx="286.06" cy="-18" rx="62.56" ry="18"/>
+<text text-anchor="middle" x="286.06" y="-12.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">combined.vcf</text>
 </g>
 <!-- merge vcfs&#45;&gt;combined.vcf -->
 <g id="edge13" class="edge">
 <title>merge vcfs&#45;&gt;combined.vcf</title>
-<path fill="none" stroke="black" d="M409.06,-71.7C409.06,-64.24 409.06,-55.32 409.06,-46.97"/>
-<polygon fill="black" stroke="black" points="412.56,-47.1 409.06,-37.1 405.56,-47.1 412.56,-47.1"/>
+<path fill="none" stroke="black" d="M286.06,-71.7C286.06,-64.24 286.06,-55.32 286.06,-46.97"/>
+<polygon fill="black" stroke="black" points="289.56,-47.1 286.06,-37.1 282.56,-47.1 289.56,-47.1"/>
+</g>
+<!-- MEDAKA haploid_variant -->
+<g id="node8" class="node">
+<title>MEDAKA haploid_variant</title>
+<polygon fill="none" stroke="black" points="641.82,-252 384.49,-252 318.29,-216 575.62,-216 641.82,-252"/>
+<text text-anchor="middle" x="480.06" y="-228.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">MEDAKA haploid_variant</text>
+</g>
+<!-- MEDAKA haploid_variant&#45;&gt;medaka.VCF -->
+<g id="edge6" class="edge">
+<title>MEDAKA haploid_variant&#45;&gt;medaka.VCF</title>
+<path fill="none" stroke="black" d="M464.98,-215.7C457.63,-207.27 448.66,-196.97 440.61,-187.73"/>
+<polygon fill="black" stroke="black" points="442.75,-185.86 433.54,-180.62 437.47,-190.46 442.75,-185.86"/>
 </g>
 <!-- sample.FASTQ -->
 <g id="node9" class="node">
 <title>sample.FASTQ</title>
-<ellipse fill="none" stroke="black" cx="261.06" cy="-525" rx="70.84" ry="18"/>
-<text text-anchor="middle" x="261.06" y="-519.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">sample.FASTQ</text>
+<ellipse fill="none" stroke="black" cx="269.06" cy="-525" rx="70.84" ry="18"/>
+<text text-anchor="middle" x="269.06" y="-519.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">sample.FASTQ</text>
 </g>
 <!-- sample.FASTQ&#45;&gt;FLYE -->
 <g id="edge11" class="edge">
 <title>sample.FASTQ&#45;&gt;FLYE</title>
-<path fill="none" stroke="black" d="M257.5,-506.7C255.81,-498.49 253.75,-488.46 251.85,-479.19"/>
-<polygon fill="black" stroke="black" points="255.08,-478.52 249.64,-469.43 248.22,-479.93 255.08,-478.52"/>
+<path fill="none" stroke="black" d="M266.92,-506.7C265.91,-498.49 264.67,-488.46 263.53,-479.19"/>
+<polygon fill="black" stroke="black" points="266.9,-478.93 262.2,-469.43 259.95,-479.78 266.9,-478.93"/>
 </g>
 <!-- sample.FASTQ&#45;&gt;MEDAKA haploid_variant -->
 <g id="edge10" class="edge">
 <title>sample.FASTQ&#45;&gt;MEDAKA haploid_variant</title>
-<path fill="none" stroke="black" d="M291.37,-508.37C294.97,-505.6 298.32,-502.48 301.06,-499 330.82,-461.08 327.4,-443.6 335.06,-396 342.86,-347.45 333.68,-331.66 311.06,-288 306.19,-278.61 299.75,-269.09 293.5,-260.75"/>
-<polygon fill="black" stroke="black" points="295.79,-258.99 286.89,-253.23 290.26,-263.28 295.79,-258.99"/>
+<path fill="none" stroke="black" d="M302.15,-508.75C306.76,-505.87 311.22,-502.61 315.06,-499 390.94,-427.59 446.11,-314.02 468.72,-262.28"/>
+<polygon fill="black" stroke="black" points="472.32,-263.78 473.05,-253.22 465.88,-261.02 472.32,-263.78"/>
 </g>
 <!-- reference.FASTA -->
 <g id="node10" class="node">
 <title>reference.FASTA</title>
-<ellipse fill="none" stroke="black" cx="483.06" cy="-525" rx="77.18" ry="18"/>
-<text text-anchor="middle" x="483.06" y="-519.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">reference.FASTA</text>
-</g>
-<!-- reference.FASTA&#45;&gt;MEDAKA haploid_variant -->
-<g id="edge12" class="edge">
-<title>reference.FASTA&#45;&gt;MEDAKA haploid_variant</title>
-<path fill="none" stroke="black" d="M474.39,-506.85C453.44,-466.29 397.04,-362.32 333.06,-288 324.26,-277.78 313.47,-267.77 303.43,-259.24"/>
-<polygon fill="black" stroke="black" points="306.16,-256.14 296.22,-252.46 301.7,-261.53 306.16,-256.14"/>
+<ellipse fill="none" stroke="black" cx="468.06" cy="-525" rx="77.18" ry="18"/>
+<text text-anchor="middle" x="468.06" y="-519.2" font-family="Helvetica,Arial,sans-serif" font-size="14.00">reference.FASTA</text>
 </g>
 <!-- reference.FASTA&#45;&gt;minimap2 call -->
 <g id="edge8" class="edge">
 <title>reference.FASTA&#45;&gt;minimap2 call</title>
-<path fill="none" stroke="black" d="M486.87,-506.79C497.54,-458.61 527.77,-322.09 540.87,-262.92"/>
-<polygon fill="black" stroke="black" points="544.44,-264.01 543.18,-253.49 537.6,-262.49 544.44,-264.01"/>
+<path fill="none" stroke="black" d="M459.7,-506.85C438.31,-464.47 377.57,-353.49 298.06,-288 284.04,-276.46 267.17,-266 251.67,-257.49"/>
+<polygon fill="black" stroke="black" points="253.71,-254.07 243.24,-252.45 250.41,-260.25 253.71,-254.07"/>
+</g>
+<!-- reference.FASTA&#45;&gt;MEDAKA haploid_variant -->
+<g id="edge12" class="edge">
+<title>reference.FASTA&#45;&gt;MEDAKA haploid_variant</title>
+<path fill="none" stroke="black" d="M468.77,-506.79C470.77,-458.71 476.42,-322.66 478.88,-263.29"/>
+<polygon fill="black" stroke="black" points="482.41,-263.62 479.33,-253.49 475.42,-263.33 482.41,-263.62"/>
 </g>
 </g>
 </svg>

@@ -13,10 +13,12 @@ digraph mygraph {
 
         "FLYE" -> "MEDAKA polish";
   	"MEDAKA polish" -> "consensus.FASTQ"
-  	"MEDAKA haploid_variant" -> "medaka.VCF"
+
   	"consensus.FASTQ" -> "minimap2 call"
   	"minimap2 call" -> "consensus.VCF"
   	"consensus.VCF" -> "merge vcfs"
+
+	"MEDAKA haploid_variant" -> "medaka.VCF"
   	"medaka.VCF" -> "merge vcfs"
   }
 
