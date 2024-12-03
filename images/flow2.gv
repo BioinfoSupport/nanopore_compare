@@ -31,7 +31,7 @@ digraph mygraph {
     s31 [label="s3 vs WT.VCF"]
   }
 
-  s1cons [shape=ellipse, style=dashed, label="s1 (WT) consensus.FASTA"]
+  s1cons [shape=ellipse, style=dashed, label="Sample1 (WT)\nconsensus.FASTA"]
 
   s1 -> c1r -> s1r
   s2 -> c2r -> s2r
@@ -42,6 +42,19 @@ digraph mygraph {
   s1cons -> {c21 c31}
   s2 -> c21 -> s21
   s3 -> c31 -> s31
-  
+
+  subgraph cluster_1 {
+    style="dotted";
+    label="Calling vs reference";
+    labeljust="left";
+    c1r c2r c3r
+  }
+
+  subgraph cluster_2 {
+    style="dotted";
+    label="Calling vs WT";
+    labeljust="left";
+    c21 c31
+  }
   
 }
