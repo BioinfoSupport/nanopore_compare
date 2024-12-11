@@ -7,18 +7,18 @@ Create the `params.json` file describing your task, following the example
 ```
 {
     "sample_files": [
-     "../../scratch/2024_bshC/basecalls/barcode01.pass.cram",
-     "../../scratch/2024_bshC/basecalls/barcode12.pass.cram"
+     "wt.fastq.gz",
+     "mutant.fastq.gz"
     ],
     "exclude_samples": [],
-    "consensus_ref_sample": "barcode01",
-    "data_dir": "data/nanopore_8325",
+    "consensus_ref_sample": "wt",
+    "data_dir": "data/",
     "medaka_model": "r1041_e82_400bps_sup_v4.2.0",
     "medaka_variant_model": "r1041_e82_400bps_sup_variant_v4.2.0",
 
-    "ref_fa": "data/saureus/Saureus8325.fasta",
-    "ref_id": "SA8325",
-    "ref_gff": "data/saureus/Saureus8325.gff",
+    "ref_fa": "data/ref.fasta",
+    "ref_gff": "data/ref.gff",
+    "ref_id": "REF",
     "gene_annotation_bed": "data/saureus/Saureus8325_gene_annotations.bed"
 }
 ```
