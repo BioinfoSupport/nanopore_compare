@@ -45,7 +45,7 @@ of the designated samples) the overall logic is the following
 ![calling pipeline](images/flow1.svg)
 Then this calling pipeline is applied to each pair of provided sample
 and reference, or sample and consensus sequence of a selected
-reference sample
+WT sample as reference
 
 ![overall flow](images/flow2.svg)
 

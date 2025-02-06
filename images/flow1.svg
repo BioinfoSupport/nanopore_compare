@@ -12,7 +12,7 @@
 <g id="clust1" class="cluster">
 <title>cluster_1</title>
 <polygon fill="none" stroke="black" points="102.06,-64 102.06,-499 650.06,-499 650.06,-64 102.06,-64"/>
-<text text-anchor="middle" x="376.06" y="-481.7" font-family="Helvetica,Arial,sans-serif" font-size="14.00">calling pipeline</text>
+<text text-anchor="middle" x="154.31" y="-481.7" font-family="Helvetica,Arial,sans-serif" font-size="14.00">calling pipeline</text>
 </g>
 <!-- consensus.FASTQ -->
 <g id="node1" class="node">

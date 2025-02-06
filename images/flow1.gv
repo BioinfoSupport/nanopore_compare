@@ -6,6 +6,7 @@ digraph mygraph {
 
   subgraph cluster_1 {
 	label = "calling pipeline";
+        labeljust="left";
 
   	"consensus.FASTQ" [shape=ellipse]
  	"medaka.VCF" [shape=ellipse]

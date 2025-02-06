@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com///nextflow_schema.json",
+  "title": " pipeline parameters",
+  "description": "",
+  "type": "object",
+  "properties": {
+    "sample_files": {
+      "type": "string"
+    },
+    "sample_fastqs": {
+      "type": "string"
+    },
+    "flye_flags": {
+      "type": "string"
+    },
+    "medaka_model": {
+      "type": "string"
+    },
+    "medaka_variant_model": {
+      "type": "string"
+    },
+    "exclude_samples": {
+      "type": "string"
+    },
+    "consensus_ref_sample": {
+      "type": "string"
+    },
+    "ref_fa": {
+      "type": "string"
+    },
+    "ref_id": {
+      "type": "string"
+    },
+    "ref_gff": {
+      "type": "string"
+    },
+    "gene_annotation_bed": {
+      "type": "string"
+    },
+    "store_dir": {
+      "type": "string"
+    },
+    "data_dir": {
+      "type": "string"
+    },
+    "my_medaka_compare": {
+      "type": "string"
+    },
+    "medaka_polish": {
+      "type": "string"
+    },
+    "regions_annotation": {
+      "type": "string"
+    },
+    "medaka_lowq": {
+      "type": "string"
+    },
+    "prokka_args": {
+      "type": "string"
+    },
+    "minimap2_cs_tag": {
+      "type": "string"
+    },
+    "do_flye_meta": {
+      "type": "string"
+    },
+    "publish_mode": {
+      "type": "string"
+    },
+    "clair3": {
+      "type": "string"
+    },
+    "clair3_platform": {
+      "type": "string"
+    },
+    "clair3_model": {
+      "type": "string"
+    },
+    "sniffles": {
+      "type": "string"
+    }
+  }
+}
