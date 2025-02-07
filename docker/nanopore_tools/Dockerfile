@@ -31,8 +31,9 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install 
     && rm -rf /var/lib/apt/lists/*
 
 
+LABEL Flye="2.9.5"
 WORKDIR /
-RUN git clone -b 2.9.3 --depth 1 https://github.com/fenderglass/Flye
+RUN git clone -b 2.9.5 --depth 1 https://github.com/fenderglass/Flye
 WORKDIR	/Flye
 RUN make && \
     python3 setup.py install && \
@@ -43,10 +44,11 @@ RUN make && \
 WORKDIR /
 RUN rm -rf Flye
 
-
-RUN pip3 install "medaka==1.11.3" && \
+LABEL medaka="2.0.1"
+RUN pip3 install "medaka==2.0.1" && \
     rm -rf /root/.cache
 
+LABEL samtools="1.19"
 ARG hts_ver=1.19
 WORKDIR /htslib
 RUN curl -L https://github.com/samtools/htslib/releases/download/$hts_ver/htslib-$hts_ver.tar.bz2 | tar -xjf -
