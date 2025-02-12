@@ -31,25 +31,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install 
     && rm -rf /var/lib/apt/lists/*
 
 
-LABEL Flye="2.9.5"
-WORKDIR /
-RUN git clone -b 2.9.5 --depth 1 https://github.com/fenderglass/Flye
-WORKDIR	/Flye
-RUN make && \
-    python3 setup.py install && \
-    ln -s flye-minimap2 /usr/local/bin/minimap2 && \
-    curl -L https://github.com/attractivechaos/k8/releases/download/v0.2.4/k8-0.2.4.tar.bz2 | tar -jxf - && \
-    cp k8-0.2.4/k8-`uname -s` /usr/local/bin/k8 && \
-    cp lib/minimap2/misc/*.js /usr/local/bin
-WORKDIR /
-RUN rm -rf Flye
-
-LABEL medaka="2.0.1"
-RUN pip3 install "medaka==2.0.1" && \
-    rm -rf /root/.cache
-
-LABEL samtools="1.19"
-ARG hts_ver=1.19
+LABEL samtools="1.21"
+ARG hts_ver=1.21
 WORKDIR /htslib
 RUN curl -L https://github.com/samtools/htslib/releases/download/$hts_ver/htslib-$hts_ver.tar.bz2 | tar -xjf -
 WORKDIR /htslib/htslib-${hts_ver}
@@ -71,6 +54,25 @@ RUN ./configure && \
 WORKDIR /
 RUN rm -rf htslib
 
+LABEL Flye="2.9.5"
+WORKDIR /
+RUN git clone -b 2.9.5 --depth 1 https://github.com/fenderglass/Flye
+WORKDIR	/Flye
+RUN make && \
+    python3 setup.py install && \
+    ln -s flye-minimap2 /usr/local/bin/minimap2 && \
+    curl -L https://github.com/attractivechaos/k8/releases/download/v0.2.4/k8-0.2.4.tar.bz2 | tar -jxf - && \
+    cp k8-0.2.4/k8-`uname -s` /usr/local/bin/k8 && \
+    cp lib/minimap2/misc/*.js /usr/local/bin
+WORKDIR /
+RUN rm -rf Flye
+
+LABEL medaka="2.0.1_cpu"
+# RUN pip3 install "medaka==2.0.1" && \
+#     rm -rf /root/.cache
+RUN pip3 install "medaka-cpu==2.0.1" --extra-index-url https://download.pytorch.org/whl/cpu && \
+    pip3 install pyabpoa && \
+    rm -rf /root/.cache
 
 
 ### Main stage

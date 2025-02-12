@@ -16,7 +16,7 @@ process MEDAKA_CALL {
     
     script:
     """
-medaka_haploid_variant -i ${fastq} -r ${ref_fa} -m ${medaka_model_path} \
+medaka_variant -i ${fastq} -r ${ref_fa} -m ${medaka_model_path} \
         -t ${task.cpus} -o medaka.reads_vs_ref
 ## Fix of strange annotation mistake -- medaka duplicates some vcf lines?
 ## Also attempt to "standardize" the calls

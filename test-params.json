@@ -2,9 +2,9 @@
     "data_dir" : "data/nanopore",
 
     "sample_fastqs": [
-	"data/in/barcode01.pass.cram",
-	"data/in/barcode02.pass.cram",
-	"data/in/barcode03.pass.cram"
+	"data/nanopore/barcode01.guppy.pass.fastq.gz",
+	"data/nanopore/barcode02.guppy.pass.fastq.gz",
+	"data/nanopore/barcode03.guppy.pass.fastq.gz"
     ],
 
     "consensus_ref_sample": "barcode01",
