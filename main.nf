@@ -24,10 +24,12 @@ params.ref_gff = "data/saureus/Saureus8325.gff"
 params.gene_annotation_bed = "${workflow.projectDir}/assets/NO_FILE"
 
 params.store_dir = "store_dir"
-params.data_dir = "data"
+params.output_dir = "out"
 
 params.my_medaka_compare = false
 params.medaka_polish = true
+
+params.save_medaka_consensus = true
 
 params.regions_annotation = "${workflow.projectDir}/assets/NO_FILE"
 // Some marginal calls appear
@@ -105,7 +107,7 @@ include {
 
 // Assembles draft consensus assembly
 process FLYE_ASSEMBLE {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}"
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)/meta.name}"
 //        pattern: "flye/{assembly_info.txt,assembly_graph.gfa}",
 //        saveAs: { it.replaceFirst(/\//, ".") }
     
@@ -129,7 +131,7 @@ touch flye/assembly.fasta flye/assembly_info.txt flye/assembly_graph.gfa
 }
 
 process FLYE_ASSEMBLE_FULL {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)/meta.name}",
         saveAs: { it.replaceFirst(/flye\//, "flye_full/") }
     
     input:
@@ -154,9 +156,10 @@ touch flye/assembly.fasta flye/assembly_info.txt flye/assembly_graph.gfa
 
 // Polish the draft consensus assembly, and save it as fastq, so qualities are avilable
 process MEDAKA_POLISH {
-    // publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
-    //         pattern: "medaka/consensus.fastq",
-    //         saveAs: { "consensus.fastq" }
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)/meta.name}",
+             pattern: "medaka/consensus.fastq",
+             saveAs: { "consensus.fastq" },
+             enabled: params.save_medaka_consensus
     
     input:
     tuple val(meta), path(draft_fasta), path(fastq)
@@ -312,7 +315,7 @@ workflow CALL_VS_REF {
 ////////////////////////////////////////////////////////////////////////
 
 process ADD_ASSEMBLY_PAF_FOR_LIFTOVER {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/cons_meta.name}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)/cons_meta.name}",
         pattern: "*.paf",
         saveAs: { it.replaceFirst(/ref/,ref_meta.name) }
 
@@ -330,7 +333,7 @@ minimap2 -un -cx asm5 --cs ${ref_fa} ${cons_fastx} > consensus_vs_ref.mm2.paf
 }
 
 process ADD_ASSEMBLY_CHAIN_FOR_LIFTOVER {
-    publishDir mode: 'copy', path: "${file(params.data_dir)/cons_meta.name}",
+    publishDir mode: 'copy', path: "${file(params.output_dir)/cons_meta.name}",
         saveAs: { it.replaceFirst(/ref/,ref_meta.name) }
 
     input:
@@ -352,7 +355,7 @@ paf2chain --input ref_vs_consensus.mm2.paf > ref_vs_consensus.chain
 
 // Problem: --no-comp-alleles produces bad result in case of "restoring" SNP. What is teh way arond this?
 process LIFTOVER_MEDAKA_CALLS {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)/meta.name}",
         saveAs: { it.replaceFirst(/ref/, paf_meta.name) }
     
     input:
@@ -372,7 +375,7 @@ bcftools index medaka.reads_vs_ref.lifted.vcf.gz
 }
 
 process LIFTOVER_MM2_CALLS {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)/meta.name}",
         saveAs: { it.replaceFirst(/ref/, paf_meta.name) }
 
     input:
@@ -463,7 +466,7 @@ workflow ANNOTATE_CONSENSUS {
 ////////////////////// Final VCF merging processes
 
 process MERGE_VCFS {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)}",
         saveAs: {
         it.replaceFirst(/merged_vcf/,
         'medaka.reads_vs_'+params.consensus_ref_sample+'.lifted.merged') }
@@ -492,7 +495,7 @@ fi
 }
 
 process MERGE_READS_VS_REF_VCFS {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)}",
         saveAs: { it.replaceFirst(/merged_reads_vs_ref_vcf/,
           'medaka.reads_vs_'+params.ref_id+'.merged') }
 
@@ -520,7 +523,7 @@ fi
 }
 
 process MERGE_READS_VS_REF_VCFS_MM {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)}",
         saveAs: { it.replaceFirst(/merged_mm_vs_ref_vcf/,
           'mm2.cons_vs_'+params.ref_id+'.merged') }
 
@@ -548,7 +551,7 @@ fi
 }
 
 process MERGE_VCFS_MM {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)}",
         saveAs: {
         it.replaceFirst(/merged_mm_vcf/,
         'mm2.cons_vs_'+params.consensus_ref_sample+'.lifted.merged') }
@@ -577,7 +580,7 @@ fi
 }
 
 process MERGE_CLAIR3_VCFS {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)}",
         saveAs: {it.replaceFirst(/ref/, params.ref_id)}
 
     input:
@@ -604,7 +607,7 @@ fi
 }
 
 process MERGE_CLAIR3_SENSITIVE_VCFS {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)}",
         saveAs: {it.replaceFirst(/ref/, params.ref_id).replaceFirst(/clair/, "clair_sensitive_")}
 
     input:
@@ -636,7 +639,7 @@ fi
 
 
 process MEDAKA_GENERATE_CONSENSUS_HDF {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)/meta.name}",
              saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
     cpus 2 // Check -- this is really teh max here? Do not override in parameters later
 
@@ -655,7 +658,7 @@ medaka consensus "${bam}" "${meta.name}_vs_ref.hdf" \
     """
 }
 process MEDAKA_REPOLISH {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}"
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)}"
 
 input:
     tuple val(ref_meta), path(ref_fa), path(ref_fa_fai), path(ref_fa_mmi)
@@ -672,7 +675,7 @@ samtools faidx ${polished_fasta}
     """    
 }
 // process MEDAKA_VARIANTS {
-//     publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)}",
+//     publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)}",
 //              saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
 //     cpus 2
 
@@ -691,7 +694,7 @@ samtools faidx ${polished_fasta}
 process MY_MEDAKA_COMPARE {
     cpus 1
     container "/home/users/b/bezrukov/medaka_compare/medaka_compare.sif"
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}",
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)/meta.name}",
              saveAs: { it.replaceFirst(/ref/, ref_meta.name) }
 
     input:
@@ -857,7 +860,7 @@ Nanopore pipeline for microbial genome
 
 // Dump the workflow parameters and current directory git status
 workflow.onComplete = {
-    file = new File(params.data_dir, "workflow.log").newWriter()
+    file = new File(params.output_dir, "workflow.log").newWriter()
     file << "Info:\n"
     file << "$workflow" << "\n\n"
     file << "git status:\n"
@@ -867,7 +870,7 @@ workflow.onComplete = {
     file << "\nDONE!\n"
     file.close()
     
-    file = new File(params.data_dir, "params.json").newWriter()
+    file = new File(params.output_dir, "params.json").newWriter()
     json_str = JsonOutput.toJson(params)
     json_indented = JsonOutput.prettyPrint(json_str)
     file << json_indented << "\n"
