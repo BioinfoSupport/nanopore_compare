@@ -41,7 +41,7 @@
     "store_dir": {
       "type": "string"
     },
-    "data_dir": {
+    "output_dir": {
       "type": "string"
     },
     "my_medaka_compare": {

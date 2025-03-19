@@ -1,5 +1,5 @@
 {
-    "data_dir" : "data/nanopore",
+    "output_dir" : "data/nanopore",
 
     "sample_fastqs": [
 	"data/nanopore/barcode01.guppy.pass.fastq.gz",
