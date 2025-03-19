@@ -12,7 +12,7 @@ Create the `params.json` file describing your task, following the example
     ],
     "exclude_samples": [],
     "consensus_ref_sample": "wt",
-    "data_dir": "data/",
+    "output_dir": "data/",
     "medaka_model": "r1041_e82_400bps_sup_v4.2.0",
     "medaka_variant_model": "r1041_e82_400bps_sup_variant_v4.2.0",
 
