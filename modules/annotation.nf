@@ -1,6 +1,6 @@
 
 process PROKKA_ANNOTATE {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}"
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)/meta.name}"
     
     input:
     tuple val(meta), path(fasta), path(fai), path(mmi)
@@ -16,7 +16,7 @@ prokka --outdir prokka_annotation --prefix ${meta.name} --cpus ${task.cpus} ${pa
 
 
 process ADD_GENOME_JSON {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}"
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)/meta.name}"
     cpus 1
 
     input:
@@ -53,7 +53,7 @@ EOF
 }
 
 process LIFTOVER_REF_ANNOTATIONS {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}"
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)/meta.name}"
     cpus 1
     
     input:

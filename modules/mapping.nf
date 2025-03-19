@@ -2,7 +2,7 @@
 
 // Just direct mapping of the reads to the reference, for IGV manual control
 process MAP_READS {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}"
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)/meta.name}"
 
     input:
     tuple val(ref_meta), path(ref_fa), path(ref_fa_fai), path(ref_fa_mmi)
@@ -22,7 +22,7 @@ samtools index ${bam}
 }
 
 process BAMSTATS_MAPPED_READS {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}"
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)/meta.name}"
 
     input:
     tuple val(meta), path(bam), path(bam_bai)
@@ -38,7 +38,7 @@ samtools stats ${bam} > ${bamstats}
 }
 
 process FLAGSTAT_MAPPED_READS {
-    publishDir mode: "${params.publish_mode}", path: "${file(params.data_dir)/meta.name}"
+    publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)/meta.name}"
 
     input:
     tuple val(meta), path(bam), path(bam_bai)
