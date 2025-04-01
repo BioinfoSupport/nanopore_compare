@@ -53,7 +53,7 @@ params.clair3_platform = "ont"
 params.clair3_model = "r1041_e82_400bps_sup_g615"
 
 params.sniffles = false
-
+params.sniffles_opts = ""
 
 
 import groovy.json.JsonOutput

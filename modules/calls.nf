@@ -179,7 +179,7 @@ process SNIFFLES_CALL {
     tuple val(meta), path(bam), path(bam_bai)
 
     output:
-    tuple val(meta), path("sniffles.vcf.gz")
+    tuple val(meta), path("sniffles.vcf.gz"), path("sniffles.vcf.gz.csi")
     
     script:
     """
@@ -187,8 +187,10 @@ sniffles \
   --input ${bam} \
   --reference ${ref_fa} \
   --threads ${task.cpus} \
+  ${params.sniffles_opts} \
   --vcf sniffles.vcf
 bgzip sniffles.vcf
+bcftools index sniffles.vcf.gz
     """
 }
 

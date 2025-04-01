@@ -2,7 +2,7 @@ FROM ubuntu:22.04
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install -y --no-install-recommends \
     git \
-    wget \
+    curl \
     bzip2 \
     make \
     cmake \
@@ -18,14 +18,23 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install 
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+LABEL samtools="1.21"
+ARG hts_ver=1.21
 WORKDIR /htslib
-RUN wget -q https://github.com/samtools/htslib/releases/download/1.19/htslib-1.19.tar.bz2 && \
-    tar jxvf htslib-1.19.tar.bz2  
-WORKDIR /htslib/htslib-1.19
+RUN curl -L https://github.com/samtools/htslib/releases/download/$hts_ver/htslib-$hts_ver.tar.bz2 | tar -xjf -
+WORKDIR /htslib/htslib-${hts_ver}
 RUN ./configure && \
-    make && \
+    make -j && \
     make install 
-    
+WORKDIR /htslib
+RUN curl -L https://github.com/samtools/bcftools/releases/download/$hts_ver/bcftools-$hts_ver.tar.bz2 | tar -xjf -
+WORKDIR /htslib/bcftools-${hts_ver}
+RUN ./configure && \
+    make -j && \
+    make install 
+WORKDIR /
+RUN rm -rf htslib
+
 # RUN pip3 install sniffles
 RUN python3 -m venv /venv \
   && pip install --no-cache-dir pysam==0.22.0 \
