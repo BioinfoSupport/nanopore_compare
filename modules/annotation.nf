@@ -90,5 +90,10 @@ process GFF_TO_GENE_BED {
     script:
     """
 gff_to_gene_bed.R ${gene_gff} gene_annotation.bed
+## Create dummy just in case
+if [ \$? != "0" ]; then
+    rm -f gene_annotation.bed
+    touch gene_annotation.bed
+fi
     """
 }
