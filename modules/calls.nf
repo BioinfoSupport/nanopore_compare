@@ -284,7 +284,8 @@ process MERGE_JOINED_CALL_FILES {
 
     input:
     path 'vcf*.vcf.gz'
-    path regions_annotation // Optional
+    path 'gene_annotation.bed' // Optional
+    path 'regions_annotation.bed' // Optional
     tuple val(ref_meta), path(ref_fasta), path(ref_fai)
     val(suffix) // Indicate lifted for publishing
 
@@ -309,24 +310,20 @@ else
     bcftools index joined_vs_ref.merged0.vcf.gz
 fi
 
-## Annotate the merged file
+
+## Annotate the merged file by gene names
 cat >annot.hdr <<EOF
-##INFO=<ID=GENE,Number=1,Type=String,Description="Gene name">
+##INFO=<ID=GENE,Number=1,Type=String,Description="Gene names">
 ##INFO=<ID=NOTE,Number=1,Type=String,Description="Region manual note">
 EOF
-bcftools annotate -h annot.hdr -c CHROM,FROM,TO,GENE -a ${file(params.gene_annotation_bed)} -o joined_vs_ref.merged1.vcf.gz joined_vs_ref.merged0.vcf.gz
+bcftools annotate -h annot.hdr -c CHROM,FROM,TO,=GENE -a gene_annotation.bed -o joined_vs_ref.merged1.vcf.gz joined_vs_ref.merged0.vcf.gz
 bcftools index joined_vs_ref.merged1.vcf.gz
-""" + ( regions_annotation.name != 'NO_FILE' ?
-	"""
-    ## Fix potential bad regions from igv
-    awk -F"\t" 'BEGIN{OFS="\t"}; NF<4{\$4="EmptyNote"}; {gsub(/ /,"_",\$4);print}' ${regions_annotation} > fixed.regions.bed
-    bcftools annotate -a fixed.regions.bed -c CHROM,FROM,TO,NOTE -h annot.hdr joined_vs_ref.merged1.vcf.gz -o joined_vs_ref.merged.vcf.gz
-    bcftools index  joined_vs_ref.merged.vcf.gz
-        """ : """
-    mv joined_vs_ref.merged1.vcf.gz joined_vs_ref.merged.vcf.gz
-    mv joined_vs_ref.merged1.vcf.gz.csi joined_vs_ref.merged.vcf.gz.csi
-        """ ) +
-    """
+
+## Fix potential bad regions from igv and annotate by manual regions
+awk -F"\t" 'BEGIN{OFS="\t"}; NF<4{\$4="EmptyNote"}; {gsub(/ /,"_",\$4);print}' regions_annotation.bed > fixed.regions.bed
+bcftools annotate -a fixed.regions.bed -c CHROM,FROM,TO,NOTE -h annot.hdr joined_vs_ref.merged1.vcf.gz -o joined_vs_ref.merged.vcf.gz
+bcftools index  joined_vs_ref.merged.vcf.gz
+
 ## Filtering concordant variants
 bcftools filter -m+ -s CONCORDANT -e 'AN=N_SAMPLES && N_ALT=1' joined_vs_ref.merged.vcf.gz -o joined_vs_ref.merged.discordant.vcf.gz
 bcftools index joined_vs_ref.merged.discordant.vcf.gz

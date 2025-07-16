@@ -98,7 +98,8 @@ include {
 include {
     PROKKA_ANNOTATE
     LIFTOVER_REF_ANNOTATIONS 
-    ADD_GENOME_JSON 
+    ADD_GENOME_JSON
+    GFF_TO_GENE_BED
 } from './modules/annotation.nf'
 
 ////////////////////////////////////////////////////////////////////////
@@ -787,8 +788,17 @@ Nanopore pipeline for microbial genome
     CALL_VS_REF.out[0].map({it[1]}).collect() | MERGE_READS_VS_REF_VCFS
     CALL_VS_REF.out[1].map({it[1]}).collect() | MERGE_READS_VS_REF_VCFS_MM
 
+    // Setup bed files for annotation
+    gene_annotation_bed_file = file(params.gene_annotation_bed, checkIfExists:true)
+    if (gene_annotation_bed_file.name == 'NO_FILE') {
+	gene_annotation_bed_file = GFF_TO_GENE_BED(file(params.ref_gff, checkIfExists:true))
+    }
+    regions_annotation_bed_file = file(params.regions_annotation, checkIfExists:true)
+
+    
     MERGE_JOINED_CALL_FILES(CALL_VS_REF.out[2].map({it[1]}).collect(),
-            file(params.regions_annotation, checkIfExists:true),
+            gene_annotation_bed_file,
+            regions_annotation_bed_file,
             ref, "")
     // Here we take the discordant vcf
     CONVERT_VCF_TO_TABLE(MERGE_JOINED_CALL_FILES.out[1].map({it[0]}), "common_variants.tsv")
@@ -844,10 +854,12 @@ Nanopore pipeline for microbial genome
         CALL_VS_CONS.out[1].map({it[1]}).collect() | MERGE_VCFS_MM
 
         MERGE_JOINED_CALL_FILES_CONS_LIFTED(CALL_VS_CONS.out[2].map({it[1]}).collect(),
-            file(params.regions_annotation, checkIfExists:true),
+            gene_annotation_bed_file,
+            regions_annotation_bed_file,
             cons_ref_fasta.map({it.subList(0,3)}), ".lifted")
         MERGE_JOINED_CALL_FILES_CONS(CALL_VS_CONS.out[3].map({it[1]}).collect(),
-             file(params.regions_annotation, checkIfExists:true),
+	     gene_annotation_bed_file,
+             regions_annotation_bed_file,
              cons_ref_fasta.map({it.subList(0,3)}), "")
 
         // Here we take the common vcf, as tehy are vs reference sample already

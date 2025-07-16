@@ -1,3 +1,4 @@
+// -*- groovy -*-
 
 process PROKKA_ANNOTATE {
     publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)/meta.name}"
@@ -77,3 +78,17 @@ CrossMap gff liftover.chain ${ref_gff} lifted.gff
 
 }
 
+process GFF_TO_GENE_BED {
+    label 'Rscript'
+
+    input:
+    path gene_gff
+
+    output:
+    path 'gene_annotation.bed'
+
+    script:
+    """
+gff_to_gene_bed.R ${gene_gff} gene_annotation.bed
+    """
+}

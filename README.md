@@ -18,8 +18,7 @@ Create the `params.json` file describing your task, following the example
 
     "ref_fa": "data/ref.fasta",
     "ref_gff": "data/ref.gff",
-    "ref_id": "REF",
-    "gene_annotation_bed": "data/saureus/Saureus8325_gene_annotations.bed"
+    "ref_id": "REF"
 }
 ```
 
@@ -51,7 +50,23 @@ WT sample as reference
 
 
 
-## Possible parameters
+## Possible optional parameters
+
+```
+    "gene_annotation_bed": "data/saureus/Saureus8325_gene_annotations.bed"
+```
+
+This parameter allows to use gene annotations that do not follow from
+the ref_gff file provided. Use this in case the pipeline fails at
+`GFF_TO_GENE_BED` step
+
+```
+    "regions_bed": "regions.bed"
+```
+
+This will add also a manual note to teh final VCF and CSV files. You
+can save regions from IGV and use it here. Fully optional.
+
 
 ## Output structure
 
