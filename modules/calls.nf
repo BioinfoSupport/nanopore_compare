@@ -16,7 +16,7 @@ process MEDAKA_CALL {
     
     script:
     """
-medaka_haploid_variant -i ${fastq} -r ${ref_fa} -m ${medaka_model_path} \
+medaka_variant -i ${fastq} -r ${ref_fa} -m ${medaka_model_path} \
         -t ${task.cpus} -o medaka.reads_vs_ref
 ## Fix of strange annotation mistake -- medaka duplicates some vcf lines?
 ## Also attempt to "standardize" the calls
@@ -179,7 +179,7 @@ process SNIFFLES_CALL {
     tuple val(meta), path(bam), path(bam_bai)
 
     output:
-    tuple val(meta), path("sniffles.vcf.gz")
+    tuple val(meta), path("sniffles.vcf.gz"), path("sniffles.vcf.gz.csi")
     
     script:
     """
@@ -189,6 +189,7 @@ sniffles \
   --threads ${task.cpus} \
   --vcf sniffles.vcf
 bgzip sniffles.vcf
+bcftools index sniffles.vcf.gz
     """
 }
 
