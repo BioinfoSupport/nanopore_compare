@@ -355,6 +355,9 @@ paf2chain --input ref_vs_consensus.mm2.paf > ref_vs_consensus.chain
 }
 
 // Problem: --no-comp-alleles produces bad result in case of "restoring" SNP. What is teh way arond this?
+// There are also ALT==. entries generated.
+// Also, sometimes CrossMap generates empty ALT allele, what is it? Seems CrossMap is a bit too buggy, is there a better approach?
+// TODO For the moment we just ignore them -- i.e. the comparison is not reliabal and can loose SNPs!
 process LIFTOVER_MEDAKA_CALLS {
     publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)/meta.name}",
         saveAs: { it.replaceFirst(/ref/, paf_meta.name) }
@@ -365,16 +368,20 @@ process LIFTOVER_MEDAKA_CALLS {
     tuple val(meta), path(vcf), path(vcf_csi)
 
     output:
-    tuple val(meta), path("medaka.reads_vs_ref.lifted.vcf.gz"), path("medaka.reads_vs_ref.lifted.vcf.gz.csi"), path("medaka.reads_vs_ref.lifted.vcf.unmap")
+    tuple val(meta), path("medaka.reads_vs_ref.lifted.sorted.vcf.gz"), path("medaka.reads_vs_ref.lifted.sorted.vcf.gz.csi"), path("medaka.reads_vs_ref.lifted.vcf.unmap")
     
     script:
     """
-CrossMap vcf --no-comp-alleles ${chain} ${vcf} ${ref_fasta} medaka.reads_vs_ref.lifted.vcf
-bcftools sort medaka.reads_vs_ref.lifted.vcf -o medaka.reads_vs_ref.lifted.vcf.gz
-bcftools index medaka.reads_vs_ref.lifted.vcf.gz
+# CrossMap vcf --no-comp-alleles ${chain} ${vcf} ${ref_fasta} medaka.reads_vs_ref.lifted.vcf
+CrossMap vcf ${chain} ${vcf} ${ref_fasta} medaka.reads_vs_ref.lifted.vcf
+awk -F'\t' '/^#/ {print;next};\$5!="" {print}' medaka.reads_vs_ref.lifted.vcf | bcftools sort - -o medaka.reads_vs_ref.lifted.sorted.vcf.gz
+bcftools index medaka.reads_vs_ref.lifted.sorted.vcf.gz
     """
 }
 
+// Problem: --no-comp-alleles produces bad result in case of "restoring" SNP. What is teh way arond this?
+// There are also ALT==. entries generated.
+// TODO For the moment we just ignore them -- i.e. the comparison is not reliabal and can loose SNPs!
 process LIFTOVER_MM2_CALLS {
     publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)/meta.name}",
         saveAs: { it.replaceFirst(/ref/, paf_meta.name) }
@@ -385,13 +392,14 @@ process LIFTOVER_MM2_CALLS {
     tuple val(meta), path(vcf), path(vcf_csi)
 
     output:
-    tuple val(meta), path("mm2.cons_vs_ref.lifted.vcf.gz"), path("mm2.cons_vs_ref.lifted.vcf.gz.csi"), path("mm2.cons_vs_ref.lifted.vcf.unmap")
+    tuple val(meta), path("mm2.cons_vs_ref.lifted.sorted.vcf.gz"), path("mm2.cons_vs_ref.lifted.sorted.vcf.gz.csi"), path("mm2.cons_vs_ref.lifted.vcf.unmap")
     
     script:
     """
-CrossMap vcf --no-comp-alleles ${chain} ${vcf} ${ref_fasta} mm2.cons_vs_ref.lifted.vcf
-bcftools sort mm2.cons_vs_ref.lifted.vcf -o mm2.cons_vs_ref.lifted.vcf.gz
-bcftools index mm2.cons_vs_ref.lifted.vcf.gz
+# CrossMap vcf --no-comp-alleles ${chain} ${vcf} ${ref_fasta} mm2.cons_vs_ref.lifted.vcf
+CrossMap vcf ${chain} ${vcf} ${ref_fasta} mm2.cons_vs_ref.lifted.vcf
+awk -F'\t' '/^#/ {print;next};\$5!="" {print}' mm2.cons_vs_ref.lifted.vcf | bcftools sort - -o mm2.cons_vs_ref.lifted.sorted.vcf.gz
+bcftools index mm2.cons_vs_ref.lifted.sorted.vcf.gz
     """
 }
 
@@ -466,7 +474,7 @@ workflow ANNOTATE_CONSENSUS {
 
 ////////////////////// Final VCF merging processes
 
-process MERGE_VCFS {
+process MERGE_CONS_VCFS {
     publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)}",
         saveAs: {
         it.replaceFirst(/merged_vcf/,
@@ -551,7 +559,7 @@ fi
 """
 }
 
-process MERGE_VCFS_MM {
+process MERGE_CONS_VCFS_MM {
     publishDir mode: "${params.publish_mode}", path: "${file(params.output_dir)}",
         saveAs: {
         it.replaceFirst(/merged_mm_vcf/,
@@ -850,8 +858,8 @@ Nanopore pipeline for microbial genome
 
         CALL_VS_CONS(cons_ref_paf_fasta, other_cons_fastq, other_fastq, medaka_variant_model_path, ref) // | view
     
-        CALL_VS_CONS.out[0].map({it[1]}).collect() | MERGE_VCFS
-        CALL_VS_CONS.out[1].map({it[1]}).collect() | MERGE_VCFS_MM
+        CALL_VS_CONS.out[0].map({it[1]}).collect() | MERGE_CONS_VCFS
+        CALL_VS_CONS.out[1].map({it[1]}).collect() | MERGE_CONS_VCFS_MM
 
         MERGE_JOINED_CALL_FILES_CONS_LIFTED(CALL_VS_CONS.out[2].map({it[1]}).collect(),
             gene_annotation_bed_file,
